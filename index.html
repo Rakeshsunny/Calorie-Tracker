@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>Mission 72 | Nutrition Tracker</title>
+
+  <!-- Tailwind + Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #0b0f14;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.085);
+      --stroke: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.55);
+      --muted2: rgba(255,255,255,0.35);
+      --accent: #8bd3c7;     /* mint */
+      --accent2:#6bd4ff;     /* sky */
+      --danger:#ff5a5f;
+      --ok:#34d399;
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f6f7fb;
+        --card: rgba(0,0,0,0.04);
+        --card2: rgba(0,0,0,0.055);
+        --stroke: rgba(0,0,0,0.08);
+        --text: rgba(0,0,0,0.88);
+        --muted: rgba(0,0,0,0.55);
+        --muted2: rgba(0,0,0,0.35);
+        --shadow: 0 16px 50px rgba(0,0,0,0.12);
+      }
+    }
+
+    html, body { height: 100%; }
+    body{
+      background: radial-gradient(1200px 900px at 30% -10%, rgba(139,211,199,0.22), transparent 55%),
+                  radial-gradient(1100px 800px at 85% 5%, rgba(107,212,255,0.18), transparent 55%),
+                  radial-gradient(900px 700px at 15% 85%, rgba(255,90,95,0.10), transparent 45%),
+                  var(--bg);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar{ display:none; }
+
+    .glass { background: var(--card); border: 1px solid var(--stroke); box-shadow: var(--shadow); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .glass-soft { background: var(--card2); border: 1px solid var(--stroke); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .hairline { border: 1px solid var(--stroke); }
+    .muted { color: var(--muted); }
+    .muted2 { color: var(--muted2); }
+
+    .pill { border: 1px solid var(--stroke); }
+    .chip { border: 1px solid var(--stroke); }
+    .chip.active { border-color: rgba(139,211,199,0.55); background: rgba(139,211,199,0.14); }
+
+    .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 92px); }
+    .safe-bottom-tab { padding-bottom: env(safe-area-inset-bottom); }
+
+    .sheet-backdrop { background: rgba(0,0,0,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    @media (prefers-color-scheme: light){
+      .sheet-backdrop { background: rgba(0,0,0,0.25); }
+    }
+
+    .btn { transition: transform .08s ease, background .2s ease, opacity .2s ease; }
+    .btn:active { transform: scale(0.98); }
+
+    .fade-in { animation: fadeIn .18s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+  </style>
+
+  <script>
+    // Tailwind config (optional)
+    tailwind.config = { theme: { extend: { borderRadius: { '4xl': '2rem' } } } };
+  </script>
+</head>
+
+<body class="min-h-screen">
+  <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
+
+    <!-- Top Bar -->
+    <header class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl glass-soft flex items-center justify-center">
+          <span class="text-xl">🍏</span>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Mission 72</div>
+          <div class="text-lg font-black tracking-tight">Today</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.open('settingsSheet')">
+          ⚙️
+        </button>
+        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="Actions.quickAddRecent()">
+          ➕
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero Card -->
+    <section class="glass rounded-4xl p-5 relative overflow-hidden mb-4">
+      <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full" style="background: radial-gradient(circle at 30% 30%, rgba(139,211,199,0.45), transparent 60%);"></div>
+      <div class="absolute -bottom-24 -left-24 w-64 h-64 rounded-full" style="background: radial-gradient(circle at 40% 40%, rgba(107,212,255,0.35), transparent 60%);"></div>
+
+      <div class="relative z-10 flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase tracking-[0.22em] muted font-semibold">Remaining</div>
+          <div class="text-6xl font-black tracking-tighter leading-[0.95]" id="kcalRemaining">1650</div>
+          <div class="text-xs muted mt-2">
+            Goal <span class="font-bold" id="kcalGoalText">1650</span> kcal ·
+            <span class="font-semibold" id="goalModeText">Cut</span>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="pill rounded-full px-3 py-1 text-[11px] font-semibold" id="statusChip">On track</span>
+            <span class="pill rounded-full px-3 py-1 text-[11px] font-semibold muted" id="streakChip">🔥 0-day streak</span>
+          </div>
+        </div>
+
+        <!-- Ring -->
+        <div class="relative w-[108px] h-[108px] flex items-center justify-center shrink-0">
+          <svg class="w-full h-full -rotate-90">
+            <circle cx="54" cy="54" r="44" stroke="rgba(255,255,255,0.10)" stroke-width="10" fill="transparent"></circle>
+            <circle id="ring" cx="54" cy="54" r="44" stroke="url(#grad)" stroke-width="10" fill="transparent"
+              stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46" class="transition-all duration-700"></circle>
+            <defs>
+              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="var(--accent)"/>
+                <stop offset="100%" stop-color="var(--accent2)"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute text-center">
+            <div class="text-xl font-black" id="ringPct">0%</div>
+            <div class="text-[10px] uppercase tracking-widest muted2 font-semibold">used</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Macro mini -->
+      <div class="relative z-10 mt-5 grid grid-cols-3 gap-2">
+        <div class="glass-soft rounded-2xl p-3 text-center">
+          <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Protein</div>
+          <div class="text-xl font-black mt-1"><span id="mPro">0</span><span class="text-xs muted ml-0.5">g</span></div>
+          <div class="text-[10px] muted2 mt-1"><span id="tPro">—</span> target</div>
+        </div>
+        <div class="glass-soft rounded-2xl p-3 text-center">
+          <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Carbs</div>
+          <div class="text-xl font-black mt-1"><span id="mCarb">0</span><span class="text-xs muted ml-0.5">g</span></div>
+          <div class="text-[10px] muted2 mt-1"><span id="tCarb">—</span> target</div>
+        </div>
+        <div class="glass-soft rounded-2xl p-3 text-center">
+          <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Fat</div>
+          <div class="text-xl font-black mt-1"><span id="mFat">0</span><span class="text-xs muted ml-0.5">g</span></div>
+          <div class="text-[10px] muted2 mt-1"><span id="tFat">—</span> target</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="glass-soft rounded-3xl p-1.5 mb-4 flex gap-1">
+      <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Breakfast" onclick="App.setMeal('Breakfast')">Breakfast</button>
+      <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Lunch" onclick="App.setMeal('Lunch')">Lunch</button>
+      <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Snack" onclick="App.setMeal('Snack')">Snack</button>
+      <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Dinner" onclick="App.setMeal('Dinner')">Dinner</button>
+    </section>
+
+    <!-- Search + Quick Actions -->
+    <section class="glass rounded-4xl p-4 mb-4">
+      <div class="flex gap-2">
+        <div class="flex-1 relative">
+          <input id="searchInput" type="text" placeholder="Search foods (apple, banana, sambar...)"
+            class="w-full bg-transparent px-4 py-4 rounded-3xl hairline outline-none text-sm font-semibold placeholder:opacity-60"
+            oninput="Foods.searchLive()"
+          />
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 text-lg muted">🔎</div>
+        </div>
+
+        <button class="btn rounded-3xl px-4 py-4 font-black glass-soft" onclick="UI.open('customSheet')">
+          Custom
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold active" id="chip-all" onclick="Foods.setFilter('all')">All</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-fav" onclick="Foods.setFilter('fav')">★ Saved</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-fruit" onclick="Foods.setFilter('Fruit')">Fruit</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-protein" onclick="Foods.setFilter('Protein')">Protein</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-indian" onclick="Foods.setFilter('Indian')">Indian</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-staple" onclick="Foods.setFilter('Staple')">Staples</button>
+        <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-snack" onclick="Foods.setFilter('Snack')">Snacks</button>
+      </div>
+
+      <!-- Results -->
+      <div id="searchResults" class="mt-3 space-y-2 hidden"></div>
+
+      <!-- Quick Add -->
+      <div class="mt-4 pt-4 border-t" style="border-color: var(--stroke);">
+        <div class="flex items-center justify-between">
+          <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Quick add</div>
+          <button class="text-[11px] font-bold muted underline underline-offset-4" onclick="Actions.openTemplates()">Templates</button>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Boiled Egg')">
+            <div class="font-black">🥚 Boiled Egg</div>
+            <div class="text-[11px] muted mt-1">78 kcal · 6P</div>
+          </button>
+          <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Chicken Breast (150g)')">
+            <div class="font-black">🍗 Chicken</div>
+            <div class="text-[11px] muted mt-1">250 kcal · 45P</div>
+          </button>
+          <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Chapati / Roti (1)')">
+            <div class="font-black">🫓 Chapati</div>
+            <div class="text-[11px] muted mt-1">70 kcal · 15C</div>
+          </button>
+          <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Greek Yogurt (1 cup)')">
+            <div class="font-black">🥣 Yogurt</div>
+            <div class="text-[11px] muted mt-1">130 kcal · 12P</div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Meal Log -->
+    <section class="mb-6">
+      <div class="flex items-end justify-between px-1 mb-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold" id="mealTitle">Lunch</div>
+          <div class="text-xl font-black tracking-tight">Log</div>
+        </div>
+        <div class="pill rounded-full px-3 py-2 text-xs font-black" id="mealTotal">0 kcal</div>
+      </div>
+
+      <div id="mealList" class="space-y-2"></div>
+
+      <button class="btn w-full mt-4 rounded-3xl py-4 text-xs font-black tracking-[0.22em] uppercase"
+        style="background: rgba(255,90,95,0.10); border:1px solid rgba(255,90,95,0.25);"
+        onclick="Actions.resetDay()">
+        Reset today
+      </button>
+    </section>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 safe-bottom-tab">
+    <div class="max-w-md mx-auto px-4 pb-3">
+      <div class="glass rounded-4xl p-2 flex justify-between items-center">
+        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs" id="nav-today" onclick="UI.nav('today')">Today</button>
+        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs muted" id="nav-insights" onclick="UI.nav('insights')">Insights</button>
+        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs muted" id="nav-library" onclick="UI.nav('library')">Library</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- INSIGHTS VIEW (hidden by default) -->
+  <div id="insightsView" class="fixed inset-0 hidden">
+    <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
+      <header class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.nav('today')">←</button>
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Insights</div>
+            <div class="text-lg font-black tracking-tight">Trends</div>
+          </div>
+        </div>
+        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="Actions.exportData()">Export</button>
+      </header>
+
+      <section class="glass rounded-4xl p-5 mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">7-day average</div>
+            <div class="text-3xl font-black mt-1"><span id="avgKcal">0</span> <span class="text-sm muted font-semibold">kcal</span></div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Streak</div>
+            <div class="text-3xl font-black mt-1">🔥 <span id="streakDays">0</span></div>
+          </div>
+        </div>
+
+        <div class="mt-4 h-44">
+          <canvas id="chartKcal"></canvas>
+        </div>
+      </section>
+
+      <section class="glass rounded-4xl p-5 mb-4">
+        <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold mb-3">7-day macro totals</div>
+        <div class="h-44">
+          <canvas id="chartMacros"></canvas>
+        </div>
+      </section>
+
+      <section class="glass rounded-4xl p-5">
+        <div class="flex items-center justify-between">
+          <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Data</div>
+          <div class="flex gap-2">
+            <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="Actions.importData()">Import</button>
+            <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="Actions.clearAll()">Factory reset</button>
+          </div>
+        </div>
+        <p class="text-xs muted mt-3 leading-relaxed">
+          This app is offline-first. Everything is stored on your device (localStorage).
+          Export creates a JSON backup you can paste into Notes/Drive.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <!-- LIBRARY VIEW (hidden by default) -->
+  <div id="libraryView" class="fixed inset-0 hidden">
+    <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
+      <header class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.nav('today')">←</button>
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Library</div>
+            <div class="text-lg font-black tracking-tight">Saved foods</div>
+          </div>
+        </div>
+        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.open('customSheet')">Add</button>
+      </header>
+
+      <section class="glass rounded-4xl p-4 mb-4">
+        <input id="favSearch" type="text" placeholder="Search saved foods..."
+          class="w-full bg-transparent px-4 py-4 rounded-3xl hairline outline-none text-sm font-semibold placeholder:opacity-60"
+          oninput="Foods.renderFavorites()"
+        />
+        <div class="mt-3 text-[11px] muted">Tap ★ in search results to save. Tap a saved item to add to your current meal.</div>
+      </section>
+
+      <section class="space-y-2" id="favList"></section>
+    </div>
+  </div>
+
+  <!-- SHEETS -->
+  <div id="sheetBackdrop" class="fixed inset-0 hidden sheet-backdrop" onclick="UI.closeSheets()"></div>
+
+  <!-- Add/Edit Food Sheet -->
+  <div id="foodSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
+    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
+      <div class="glass rounded-4xl p-5">
+        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold" id="sheetMode">Add</div>
+            <div class="text-2xl font-black tracking-tight truncate" id="sheetName">Food</div>
+            <div class="text-xs muted mt-1" id="sheetMeta">per serving</div>
+          </div>
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
+        </div>
+
+        <!-- Quantity -->
+        <div class="mt-4 glass-soft rounded-4xl p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Quantity</div>
+              <div class="text-3xl font-black mt-1" id="sheetQty">1.0</div>
+              <div class="text-xs muted" id="sheetUnit">servings</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn glass-soft w-12 h-12 rounded-2xl text-xl font-black" onclick="Sheet.adjust(-0.25)">−</button>
+              <button class="btn glass-soft w-12 h-12 rounded-2xl text-xl font-black" onclick="Sheet.adjust(0.25)">+</button>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-4 gap-2">
+            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(0.5)">0.5</button>
+            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(1)">1</button>
+            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(1.5)">1.5</button>
+            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(2)">2</button>
+          </div>
+        </div>
+
+        <!-- Nutrition -->
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <div class="glass-soft rounded-3xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Calories</div>
+            <div class="text-2xl font-black mt-1"><span id="sheetCal">0</span> <span class="text-xs muted font-semibold">kcal</span></div>
+          </div>
+          <div class="glass-soft rounded-3xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Macros</div>
+            <div class="text-sm font-black mt-1" id="sheetMacros">P0 · C0 · F0</div>
+            <div class="text-[11px] muted2 mt-1" id="sheetMore">Fiber 0g · Sugar 0g</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-3 flex gap-2">
+          <button class="btn flex-1 rounded-3xl py-4 font-black" style="background: rgba(139,211,199,0.16); border:1px solid rgba(139,211,199,0.35);" onclick="Sheet.toggleFavorite()">
+            <span id="favBtnText">★ Save</span>
+          </button>
+          <button class="btn flex-[1.2] rounded-3xl py-4 font-black" style="background: rgba(107,212,255,0.16); border:1px solid rgba(107,212,255,0.35);" onclick="Sheet.commit()">
+            Add to <span id="sheetMealName">Lunch</span>
+          </button>
+        </div>
+
+        <div class="mt-3 text-[11px] muted">
+          Tip: tap a logged item to edit quantity (or delete).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Food Sheet -->
+  <div id="customSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
+    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
+      <div class="glass rounded-4xl p-5">
+        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Custom food</div>
+            <div class="text-2xl font-black tracking-tight">Create</div>
+            <div class="text-xs muted mt-1">Enter per 1 serving. You can adjust servings after.</div>
+          </div>
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <input id="cName" class="col-span-2 bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Name (e.g., Homemade Upma)" />
+          <input id="cUnit" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Serving (e.g., 1 bowl)" />
+          <input id="cKcal" type="number" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Calories" />
+          <input id="cPro" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Protein (g)" />
+          <input id="cCarb" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Carbs (g)" />
+          <input id="cFat" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Fat (g)" />
+          <input id="cFiber" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Fiber (g) optional" />
+          <input id="cSugar" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Sugar (g) optional" />
+        </div>
+
+        <div class="mt-3 flex gap-2">
+          <button class="btn flex-1 rounded-3xl py-4 font-black" style="background: rgba(255,255,255,0.06); border:1px solid var(--stroke);" onclick="Actions.prefillExample()">
+            Fill example
+          </button>
+          <button class="btn flex-[1.2] rounded-3xl py-4 font-black" style="background: rgba(139,211,199,0.16); border:1px solid rgba(139,211,199,0.35);" onclick="Actions.saveCustomFood()">
+            Save + Add
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Sheet -->
+  <div id="settingsSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
+    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
+      <div class="glass rounded-4xl p-5">
+        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Settings</div>
+            <div class="text-2xl font-black tracking-tight">Goals</div>
+            <div class="text-xs muted mt-1">Set your daily targets like a pro.</div>
+          </div>
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <div class="glass-soft rounded-4xl p-4 col-span-2">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Daily calories</div>
+            <div class="mt-2 flex items-center gap-2">
+              <input id="sGoal" type="number" class="flex-1 bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
+              <button class="btn pill rounded-2xl px-3 py-3 text-xs font-black" onclick="Actions.setGoalPreset(1650)">1650</button>
+              <button class="btn pill rounded-2xl px-3 py-3 text-xs font-black" onclick="Actions.setGoalPreset(1900)">1900</button>
+            </div>
+            <div class="text-xs muted mt-2">Tip: keep it realistic. Consistency beats perfection.</div>
+          </div>
+
+          <div class="glass-soft rounded-4xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Protein target</div>
+            <input id="sPro" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
+            <div class="text-[11px] muted mt-2">grams/day</div>
+          </div>
+
+          <div class="glass-soft rounded-4xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Carb target</div>
+            <input id="sCarb" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
+            <div class="text-[11px] muted mt-2">grams/day</div>
+          </div>
+
+          <div class="glass-soft rounded-4xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Fat target</div>
+            <input id="sFat" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
+            <div class="text-[11px] muted mt-2">grams/day</div>
+          </div>
+
+          <div class="glass-soft rounded-4xl p-4">
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Mode</div>
+            <select id="sMode" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none">
+              <option value="Cut">Cut</option>
+              <option value="Maintain">Maintain</option>
+              <option value="Bulk">Bulk</option>
+            </select>
+            <div class="text-[11px] muted mt-2">just labels for motivation</div>
+          </div>
+
+          <div class="glass-soft rounded-4xl p-4 col-span-2">
+            <button class="btn w-full rounded-3xl py-4 font-black" style="background: rgba(107,212,255,0.16); border:1px solid rgba(107,212,255,0.35);" onclick="Actions.saveSettings()">
+              Save settings
+            </button>
+            <button class="btn w-full mt-2 rounded-3xl py-4 text-xs font-black tracking-[0.22em] uppercase"
+              style="background: rgba(255,90,95,0.10); border:1px solid rgba(255,90,95,0.25);"
+              onclick="Actions.resetOnlyToday()">
+              Clear today only
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates Sheet -->
+  <div id="templatesSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
+    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
+      <div class="glass rounded-4xl p-5">
+        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Templates</div>
+            <div class="text-2xl font-black tracking-tight">One-tap meals</div>
+            <div class="text-xs muted mt-1">Industry trick: make defaults, win consistency.</div>
+          </div>
+          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
+        </div>
+
+        <div class="mt-4 space-y-2" id="templatesList"></div>
+
+        <div class="mt-3 text-[11px] muted">
+          You can edit templates in the code (Templates.defaults). This file is designed to be hacked.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**********************************************************************
+     * INDUSTRY-STYLE SINGLE-FILE APP
+     * - Offline-first (localStorage)
+     * - Search + Library + Favorites
+     * - Add/Edit sheet with stepper
+     * - Daily history for insights + charts
+     * - Export/Import JSON
+     * - Clean state management + schema versioning
+     **********************************************************************/
+
+    const Storage = {
+      KEY: "mission72_v1",
+      load() {
+        try {
+          const raw = localStorage.getItem(this.KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch { return null; }
+      },
+      save(data) {
+        localStorage.setItem(this.KEY, JSON.stringify(data));
+      },
+      wipe() {
+        localStorage.removeItem(this.KEY);
+      }
+    };
+
+    const Utils = {
+      todayKey() {
+        return new Date().toISOString().split("T")[0];
+      },
+      clamp(n, min, max) { return Math.max(min, Math.min(max, n)); },
+      round1(n) { return Math.round(n * 10) / 10; },
+      round0(n) { return Math.round(n); },
+      normalize(s) {
+        return String(s || "")
+          .toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9\s()/-]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      },
+      scoreMatch(query, name, keywords=[]) {
+        // Simple “good enough” scorer:
+        // - startsWith gets best score
+        // - contains gets medium
+        // - keyword contains gets medium-low
+        const q = this.normalize(query);
+        const n = this.normalize(name);
+        if (!q) return 0;
+
+        if (n.startsWith(q)) return 100;
+        if (n.includes(q)) return 70;
+
+        const key = (keywords || []).map(k => this.normalize(k)).join(" ");
+        if (key.includes(q)) return 55;
+
+        // token overlap
+        const qt = new Set(q.split(" "));
+        const nt = new Set(n.split(" "));
+        let overlap = 0;
+        qt.forEach(t => { if (nt.has(t)) overlap++; });
+        return overlap ? 35 + overlap * 5 : 0;
+      },
+      sumMacros(items) {
+        return items.reduce((acc, it) => {
+          acc.kcal += it.kcal;
+          acc.pro += it.pro;
+          acc.carb += it.carb;
+          acc.fat += it.fat;
+          acc.fiber += (it.fiber || 0);
+          acc.sugar += (it.sugar || 0);
+          return acc;
+        }, {kcal:0, pro:0, carb:0, fat:0, fiber:0, sugar:0});
+      },
+      deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+    };
+
+    // --- Food database (expandable; includes apple/banana + lots more) ---
+    // Per 1 serving (as described by unit). Values are approximate.
+    const FoodDB = (() => {
+      const base = [
+        // Fruits
+        { id:"apple", name:"Apple (1 medium)", cat:"Fruit", unit:"1 medium", kcal:95, pro:0.5, carb:25, fat:0.3, fiber:4.4, sugar:19, sodium:2, keywords:["fruit","red apple","green apple"] },
+        { id:"banana", name:"Banana (1 medium)", cat:"Fruit", unit:"1 medium", kcal:105, pro:1.3, carb:27, fat:0.4, fiber:3.1, sugar:14, sodium:1, keywords:["fruit"] },
+        { id:"orange", name:"Orange (1 medium)", cat:"Fruit", unit:"1 medium", kcal:62, pro:1.2, carb:15.4, fat:0.2, fiber:3.1, sugar:12, sodium:0, keywords:["fruit"] },
+        { id:"mango", name:"Mango (1 cup)", cat:"Fruit", unit:"1 cup", kcal:99, pro:1.4, carb:25, fat:0.6, fiber:2.6, sugar:23, sodium:2, keywords:["fruit"] },
+        { id:"grapes", name:"Grapes (1 cup)", cat:"Fruit", unit:"1 cup", kcal:104, pro:1.1, carb:27.3, fat:0.2, fiber:1.4, sugar:23, sodium:3, keywords:["fruit"] },
+        { id:"watermelon", name:"Watermelon (1 cup)", cat:"Fruit", unit:"1 cup", kcal:46, pro:0.9, carb:11.5, fat:0.2, fiber:0.6, sugar:9.4, sodium:2, keywords:["fruit"] },
+        { id:"strawberries", name:"Strawberries (1 cup)", cat:"Fruit", unit:"1 cup", kcal:49, pro:1.0, carb:11.7, fat:0.5, fiber:3.0, sugar:7.4, sodium:2, keywords:["fruit"] },
+        { id:"blueberries", name:"Blueberries (1 cup)", cat:"Fruit", unit:"1 cup", kcal:84, pro:1.1, carb:21.4, fat:0.5, fiber:3.6, sugar:15, sodium:1, keywords:["fruit"] },
+
+        // Veg
+        { id:"carrot", name:"Carrot (1 medium)", cat:"Veg", unit:"1 medium", kcal:25, pro:0.6, carb:6, fat:0.1, fiber:1.7, sugar:2.9, sodium:42, keywords:["veg"] },
+        { id:"cucumber", name:"Cucumber (1 cup)", cat:"Veg", unit:"1 cup", kcal:16, pro:0.7, carb:3.8, fat:0.1, fiber:0.5, sugar:1.7, sodium:2, keywords:["veg"] },
+        { id:"broccoli", name:"Broccoli (1 cup)", cat:"Veg", unit:"1 cup", kcal:31, pro:2.6, carb:6, fat:0.3, fiber:2.4, sugar:1.5, sodium:30, keywords:["veg"] },
+        { id:"spinach", name:"Spinach (1 cup)", cat:"Veg", unit:"1 cup", kcal:7, pro:0.9, carb:1.1, fat:0.1, fiber:0.7, sugar:0.1, sodium:24, keywords:["veg"] },
+        { id:"tomato", name:"Tomato (1 medium)", cat:"Veg", unit:"1 medium", kcal:22, pro:1.1, carb:4.8, fat:0.2, fiber:1.5, sugar:3.2, sodium:6, keywords:["veg"] },
+
+        // Staples
+        { id:"white_rice", name:"White Rice (1 cup cooked)", cat:"Staple", unit:"1 cup cooked", kcal:205, pro:4.3, carb:44.5, fat:0.4, fiber:0.6, sugar:0.1, sodium:2, keywords:["rice"] },
+        { id:"brown_rice", name:"Brown Rice (1 cup cooked)", cat:"Staple", unit:"1 cup cooked", kcal:216, pro:5, carb:44.8, fat:1.8, fiber:3.5, sugar:0.7, sodium:10, keywords:["rice"] },
+        { id:"oats", name:"Oats (1 cup cooked)", cat:"Staple", unit:"1 cup cooked", kcal:154, pro:6, carb:27, fat:2.6, fiber:4, sugar:1, sodium:2, keywords:["oatmeal"] },
+        { id:"bread", name:"Bread (1 slice)", cat:"Staple", unit:"1 slice", kcal:79, pro:3.6, carb:14.7, fat:1.0, fiber:1.1, sugar:1.4, sodium:150, keywords:["toast"] },
+        { id:"chapati", name:"Chapati / Roti (1)", cat:"Indian", unit:"1 roti", kcal:70, pro:3, carb:15, fat:0.5, fiber:2, sugar:0.4, sodium:60, keywords:["roti","phulka"] },
+
+        // Protein
+        { id:"egg", name:"Boiled Egg (1 large)", cat:"Protein", unit:"1 egg", kcal:78, pro:6, carb:0.6, fat:5, fiber:0, sugar:0.6, sodium:62, keywords:["egg"] },
+        { id:"omelette2", name:"Omelette (2 eggs)", cat:"Protein", unit:"2 eggs", kcal:210, pro:14, carb:2, fat:16, fiber:0, sugar:1, sodium:200, keywords:["egg","omelet"] },
+        { id:"chicken_breast", name:"Chicken Breast (150g)", cat:"Protein", unit:"150g", kcal:250, pro:45, carb:0, fat:6, fiber:0, sugar:0, sodium:120, keywords:["chicken","grilled chicken"] },
+        { id:"paneer", name:"Paneer (100g)", cat:"Protein", unit:"100g", kcal:265, pro:18, carb:4, fat:20, fiber:0, sugar:3, sodium:22, keywords:["cottage cheese","indian cheese"] },
+        { id:"tofu", name:"Tofu (150g)", cat:"Protein", unit:"150g", kcal:180, pro:20, carb:4, fat:10, fiber:2, sugar:1, sodium:18, keywords:["soy"] },
+        { id:"greek_yogurt", name:"Greek Yogurt (1 cup)", cat:"Protein", unit:"1 cup", kcal:130, pro:12, carb:8, fat:0, fiber:0, sugar:6, sodium:65, keywords:["yogurt","curd"] },
+        { id:"milk", name:"Milk (1 cup)", cat:"Staple", unit:"1 cup", kcal:103, pro:8, carb:12, fat:2.4, fiber:0, sugar:12, sodium:107, keywords:["doodh"] },
+
+        // Snacks
+        { id:"almonds", name:"Almonds (28g)", cat:"Snack", unit:"28g", kcal:164, pro:6, carb:6, fat:14, fiber:3.5, sugar:1.2, sodium:0, keywords:["nuts"] },
+        { id:"peanut_butter", name:"Peanut Butter (1 tbsp)", cat:"Snack", unit:"1 tbsp", kcal:94, pro:4, carb:3.5, fat:8, fiber:1, sugar:1.5, sodium:80, keywords:["pb"] },
+        { id:"protein_shake", name:"Protein Shake (1 scoop)", cat:"Snack", unit:"1 scoop", kcal:120, pro:24, carb:3, fat:1, fiber:0, sugar:2, sodium:120, keywords:["whey"] },
+        { id:"dark_chocolate", name:"Dark Chocolate (20g)", cat:"Snack", unit:"20g", kcal:120, pro:1.5, carb:12, fat:8, fiber:2, sugar:8, sodium:2, keywords:["chocolate"] },
+
+        // Indian foods
+        { id:"sambar", name:"Sambar (1 bowl)", cat:"Indian", unit:"1 bowl", kcal:130, pro:6, carb:18, fat:4, fiber:5, sugar:3, sodium:350, keywords:["south indian","lentil stew"] },
+        { id:"idli", name:"Idli (1)", cat:"Indian", unit:"1 idli", kcal:39, pro:1, carb:8, fat:0.2, fiber:0.6, sugar:0.2, sodium:70, keywords:["south indian"] },
+        { id:"dosa_plain", name:"Dosa (plain, 1)", cat:"Indian", unit:"1 dosa", kcal:133, pro:3, carb:23, fat:3, fiber:1.5, sugar:0.5, sodium:180, keywords:["south indian"] },
+        { id:"dosa_masala", name:"Masala Dosa (1)", cat:"Indian", unit:"1 dosa", kcal:350, pro:6, carb:45, fat:16, fiber:4, sugar:3, sodium:500, keywords:["south indian"] },
+        { id:"upma", name:"Upma (1 cup)", cat:"Indian", unit:"1 cup", kcal:250, pro:6, carb:40, fat:8, fiber:3, sugar:2, sodium:420, keywords:["south indian","rava upma"] },
+        { id:"poha", name:"Poha (1 cup)", cat:"Indian", unit:"1 cup", kcal:270, pro:5, carb:48, fat:8, fiber:3, sugar:2, sodium:400, keywords:["breakfast","flattened rice"] },
+        { id:"dal", name:"Dal (1 bowl)", cat:"Indian", unit:"1 bowl", kcal:260, pro:12, carb:30, fat:10, fiber:8, sugar:3, sodium:450, keywords:["dal tadka","lentils"] },
+        { id:"paneer_butter", name:"Paneer Butter Masala (1 bowl)", cat:"Indian", unit:"1 bowl", kcal:400, pro:14, carb:12, fat:35, fiber:2, sugar:6, sodium:650, keywords:["pbm","curry"] },
+        { id:"chicken_curry", name:"Chicken Curry (1 bowl)", cat:"Indian", unit:"1 bowl", kcal:350, pro:25, carb:8, fat:20, fiber:2, sugar:3, sodium:650, keywords:["curry"] },
+        { id:"biryani_chicken", name:"Chicken Biryani (1 plate)", cat:"Indian", unit:"1 plate", kcal:500, pro:25, carb:60, fat:20, fiber:3, sugar:4, sodium:800, keywords:["biryani"] },
+
+        // Extra common
+        { id:"avocado", name:"Avocado (1/2)", cat:"Fruit", unit:"1/2 avocado", kcal:120, pro:1.5, carb:6, fat:11, fiber:5, sugar:0.7, sodium:5, keywords:["fruit","fat"] },
+        { id:"coffee", name:"Black Coffee (1 cup)", cat:"Staple", unit:"1 cup", kcal:2, pro:0.3, carb:0, fat:0, fiber:0, sugar:0, sodium:5, keywords:["coffee"] },
+        { id:"tea", name:"Tea (plain, 1 cup)", cat:"Staple", unit:"1 cup", kcal:2, pro:0, carb:0.5, fat:0, fiber:0, sugar:0, sodium:3, keywords:["chai"] },
+        { id:"curd", name:"Curd / Dahi (1 cup)", cat:"Protein", unit:"1 cup", kcal:150, pro:8.5, carb:11, fat:8, fiber:0, sugar:11, sodium:115, keywords:["yogurt","dahi"] },
+        { id:"rice_cake", name:"Rice Cake (1)", cat:"Snack", unit:"1 cake", kcal:35, pro:0.7, carb:7.3, fat:0.3, fiber:0.3, sugar:0.1, sodium:29, keywords:["snack"] },
+      ];
+
+      // Allow user-added foods (custom library) to live alongside base DB.
+      return {
+        base,
+        getAll() {
+          const custom = (App.state.customFoods || []);
+          // Deduplicate by id
+          const map = new Map();
+          [...custom, ...base].forEach(f => map.set(f.id, f));
+          return Array.from(map.values());
+        }
+      };
+    })();
+
+    const Templates = {
+      defaults: [
+        {
+          name: "South Indian Breakfast",
+          items: [
+            { foodName: "Idli (1)", qty: 3 },
+            { foodName: "Sambar (1 bowl)", qty: 1 },
+            { foodName: "Banana (1 medium)", qty: 1 }
+          ]
+        },
+        {
+          name: "Lean Lunch",
+          items: [
+            { foodName: "Chicken Breast (150g)", qty: 1 },
+            { foodName: "White Rice (1 cup cooked)", qty: 1 },
+            { foodName: "Cucumber (1 cup)", qty: 1 }
+          ]
+        },
+        {
+          name: "High-Protein Snack",
+          items: [
+            { foodName: "Protein Shake (1 scoop)", qty: 1 },
+            { foodName: "Almonds (28g)", qty: 1 }
+          ]
+        }
+      ]
+    };
+
+    const App = {
+      state: null,
+
+      init() {
+        // Load or create state
+        const saved = Storage.load();
+        this.state = saved ? this.migrate(saved) : this.defaultState();
+
+        // Ensure today's bucket exists
+        const today = Utils.todayKey();
+        this.state.days[today] ||= { logs: [] };
+
+        // Initial UI
+        this.setMeal(this.state.ui.currentMeal || "Lunch");
+        UI.nav(this.state.ui.view || "today", true);
+        UI.refreshSettingsSheet();
+        TemplatesUI.render();
+
+        // Render
+        Renderer.renderAll();
+      },
+
+      defaultState() {
+        return {
+          v: 1,
+          settings: {
+            goalKcal: 1650,
+            targetPro: 130,
+            targetCarb: 170,
+            targetFat: 55,
+            mode: "Cut"
+          },
+          ui: {
+            view: "today",
+            currentMeal: "Lunch",
+            foodFilter: "all"
+          },
+          favorites: [], // food ids
+          customFoods: [], // saved custom foods in library
+          days: {
+            // "YYYY-MM-DD": { logs: [ {id, meal, foodId, name, unit, qty, kcal, pro, carb, fat, fiber, sugar, sodium, isCustom} ] }
+          }
+        };
+      },
+
+      migrate(data) {
+        // simple schema migration hook
+        if (!data || typeof data !== "object") return this.defaultState();
+        if (!data.v) data.v = 1;
+        data.settings ||= this.defaultState().settings;
+        data.ui ||= this.defaultState().ui;
+        data.favorites ||= [];
+        data.customFoods ||= [];
+        data.days ||= {};
+        return data;
+      },
+
+      save() { Storage.save(this.state); },
+
+      setMeal(meal) {
+        this.state.ui.currentMeal = meal;
+        this.save();
+        Renderer.renderTabs();
+        Renderer.renderMeal();
+      },
+
+      todayLogs() {
+        const today = Utils.todayKey();
+        this.state.days[today] ||= { logs: [] };
+        return this.state.days[today].logs;
+      },
+
+      addLog(entry) {
+        const logs = this.todayLogs();
+        logs.unshift(entry);
+        this.save();
+        Renderer.renderAll();
+      },
+
+      updateLog(id, patch) {
+        const logs = this.todayLogs();
+        const idx = logs.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        logs[idx] = { ...logs[idx], ...patch };
+        this.save();
+        Renderer.renderAll();
+      },
+
+      deleteLog(id) {
+        const logs = this.todayLogs();
+        const idx = logs.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        logs.splice(idx, 1);
+        this.save();
+        Renderer.renderAll();
+      }
+    };
+
+    const Renderer = {
+      renderAll() {
+        this.renderHeader();
+        this.renderTabs();
+        this.renderMeal();
+        this.renderFavoritesView();
+        if (App.state.ui.view === "insights") Insights.render();
+      },
+
+      totalsForToday() {
+        const logs = App.todayLogs();
+        return logs.reduce((t, l) => {
+          t.kcal += l.kcal; t.pro += l.pro; t.carb += l.carb; t.fat += l.fat;
+          t.fiber += (l.fiber || 0); t.sugar += (l.sugar || 0);
+          return t;
+        }, {kcal:0, pro:0, carb:0, fat:0, fiber:0, sugar:0});
+      },
+
+      renderHeader() {
+        const t = this.totalsForToday();
+        const goal = App.state.settings.goalKcal;
+
+        const remaining = Math.max(0, goal - t.kcal);
+        document.getElementById("kcalRemaining").innerText = remaining;
+        document.getElementById("kcalGoalText").innerText = goal;
+        document.getElementById("goalModeText").innerText = App.state.settings.mode;
+
+        document.getElementById("mPro").innerText = Utils.round0(t.pro);
+        document.getElementById("mCarb").innerText = Utils.round0(t.carb);
+        document.getElementById("mFat").innerText = Utils.round0(t.fat);
+
+        document.getElementById("tPro").innerText = App.state.settings.targetPro + "g";
+        document.getElementById("tCarb").innerText = App.state.settings.targetCarb + "g";
+        document.getElementById("tFat").innerText = App.state.settings.targetFat + "g";
+
+        // Ring
+        const pct = Utils.clamp((t.kcal / goal) * 100, 0, 120);
+        document.getElementById("ringPct").innerText = Math.round(Math.min(pct, 100)) + "%";
+
+        const circumference = 2 * Math.PI * 44; // r=44
+        const dash = circumference * (Math.min(pct, 100) / 100);
+        const offset = circumference - dash;
+        const ring = document.getElementById("ring");
+        ring.style.strokeDasharray = circumference.toFixed(2);
+        ring.style.strokeDashoffset = offset.toFixed(2);
+
+        // Status chip
+        const chip = document.getElementById("statusChip");
+        const over = t.kcal > goal;
+        if (over) {
+          chip.textContent = "Over goal";
+          chip.style.background = "rgba(255,90,95,0.14)";
+          chip.style.borderColor = "rgba(255,90,95,0.35)";
+        } else {
+          // macro-aware “on track” if within 80-105%
+          const ratio = t.kcal / goal;
+          if (ratio >= 0.8 && ratio <= 1.05) {
+            chip.textContent = "On track";
+            chip.style.background = "rgba(52,211,153,0.14)";
+            chip.style.borderColor = "rgba(52,211,153,0.35)";
+          } else if (ratio < 0.8) {
+            chip.textContent = "Under goal";
+            chip.style.background = "rgba(107,212,255,0.12)";
+            chip.style.borderColor = "rgba(107,212,255,0.32)";
+          } else {
+            chip.textContent = "Near limit";
+            chip.style.background = "rgba(255,255,255,0.08)";
+            chip.style.borderColor = "rgba(255,255,255,0.18)";
+          }
+        }
+
+        // Streak
+        const streak = Insights.calculateStreak();
+        document.getElementById("streakChip").textContent = `🔥 ${streak}-day streak`;
+      },
+
+      renderTabs() {
+        const cur = App.state.ui.currentMeal;
+        ["Breakfast","Lunch","Snack","Dinner"].forEach(m => {
+          const btn = document.getElementById("tab-" + m);
+          const active = m === cur;
+          btn.classList.toggle("muted", !active);
+          btn.style.background = active ? "rgba(255,255,255,0.08)" : "transparent";
+          btn.style.borderColor = active ? "rgba(139,211,199,0.35)" : "rgba(255,255,255,0.10)";
+        });
+        document.getElementById("mealTitle").innerText = cur;
+      },
+
+      renderMeal() {
+        const meal = App.state.ui.currentMeal;
+        const list = document.getElementById("mealList");
+        const logs = App.todayLogs().filter(l => l.meal === meal);
+
+        const mealKcal = logs.reduce((s,l)=>s+l.kcal,0);
+        document.getElementById("mealTotal").innerText = `${Utils.round0(mealKcal)} kcal`;
+
+        if (!logs.length) {
+          list.innerHTML = `
+            <div class="glass-soft rounded-4xl p-6 text-center fade-in">
+              <div class="text-sm font-black">Nothing logged yet</div>
+              <div class="text-xs muted mt-1">Search above and add foods. Tap items here to edit.</div>
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = logs.map(l => `
+          <button class="btn w-full glass-soft rounded-4xl p-4 text-left fade-in"
+            onclick="Sheet.openEdit('${l.id}')">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-black text-base truncate">
+                  ${escapeHtml(l.name)}
+                  <span class="text-xs muted font-semibold">× ${Number(l.qty).toFixed(2).replace(/\.00$/,'')}</span>
+                </div>
+                <div class="text-[11px] muted mt-1">
+                  ${l.unit ? escapeHtml(l.unit) : "serving"}
+                  · P ${Utils.round0(l.pro)} · C ${Utils.round0(l.carb)} · F ${Utils.round0(l.fat)}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-lg font-black" style="color: var(--accent)">${Utils.round0(l.kcal)}</div>
+                <div class="text-[10px] uppercase tracking-widest muted2 font-bold">kcal</div>
+              </div>
+            </div>
+
+            <div class="mt-3 flex gap-2">
+              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold muted">${escapeHtml(l.meal)}</span>
+              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold muted">Tap to edit</span>
+              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold" style="background: rgba(255,90,95,0.10); border-color: rgba(255,90,95,0.22);"
+                onclick="event.stopPropagation(); App.deleteLog('${l.id}')">Delete</span>
+            </div>
+          </button>
+        `).join("");
+      },
+
+      renderFavoritesView() {
+        if (App.state.ui.view !== "library") return;
+        Foods.renderFavorites();
+      }
+    };
+
+    const UI = {
+      nav(view, skipSave=false) {
+        // views: today, insights, library
+        const todayRoot = document.querySelector(".max-w-md"); // first view container
+        const insights = document.getElementById("insightsView");
+        const library = document.getElementById("libraryView");
+
+        // nav button styling
+        const navToday = document.getElementById("nav-today");
+        const navInsights = document.getElementById("nav-insights");
+        const navLibrary = document.getElementById("nav-library");
+
+        function setActive(btn, active){
+          btn.classList.toggle("muted", !active);
+          btn.style.background = active ? "rgba(255,255,255,0.08)" : "transparent";
+          btn.style.border = active ? "1px solid rgba(139,211,199,0.30)" : "1px solid transparent";
+        }
+
+        setActive(navToday, view==="today");
+        setActive(navInsights, view==="insights");
+        setActive(navLibrary, view==="library");
+
+        // show/hide views
+        if (view === "today") {
+          todayRoot.parentElement.classList.remove("hidden");
+          insights.classList.add("hidden");
+          library.classList.add("hidden");
+        } else if (view === "insights") {
+          insights.classList.remove("hidden");
+          library.classList.add("hidden");
+        } else if (view === "library") {
+          library.classList.remove("hidden");
+          insights.classList.add("hidden");
+        }
+
+        App.state.ui.view = view;
+        if (!skipSave) App.save();
+
+        if (view === "insights") Insights.render();
+        if (view === "library") Foods.renderFavorites();
+      },
+
+      open(sheetId) {
+        document.getElementById("sheetBackdrop").classList.remove("hidden");
+        document.getElementById(sheetId).classList.remove("translate-y-full");
+        if (sheetId === "settingsSheet") this.refreshSettingsSheet();
+        if (sheetId === "templatesSheet") TemplatesUI.render();
+      },
+
+      closeSheets() {
+        document.getElementById("sheetBackdrop").classList.add("hidden");
+        ["foodSheet","customSheet","settingsSheet","templatesSheet"].forEach(id => {
+          document.getElementById(id).classList.add("translate-y-full");
+        });
+      },
+
+      refreshSettingsSheet() {
+        const s = App.state.settings;
+        document.getElementById("sGoal").value = s.goalKcal;
+        document.getElementById("sPro").value = s.targetPro;
+        document.getElementById("sCarb").value = s.targetCarb;
+        document.getElementById("sFat").value = s.targetFat;
+        document.getElementById("sMode").value = s.mode;
+      }
+    };
+
+    const Foods = {
+      filter: "all",
+      setFilter(f) {
+        App.state.ui.foodFilter = f;
+        App.save();
+        this.filter = f;
+
+        // chip ui
+        const chips = ["all","fav","Fruit","Protein","Indian","Staple","Snack"];
+        chips.forEach(c => {
+          const el = document.getElementById("chip-" + c.toLowerCase());
+          if (!el) return;
+          el.classList.toggle("active", c === f);
+        });
+
+        this.searchLive();
+      },
+
+      searchLive() {
+        this.filter = App.state.ui.foodFilter || "all";
+        const q = document.getElementById("searchInput").value.trim();
+        const resultsEl = document.getElementById("searchResults");
+
+        if (!q && this.filter === "all") {
+          resultsEl.classList.add("hidden");
+          resultsEl.innerHTML = "";
+          return;
+        }
+
+        const all = FoodDB.getAll();
+        const favs = new Set(App.state.favorites);
+
+        let pool = all;
+
+        // filter
+        if (this.filter === "fav") pool = all.filter(f => favs.has(f.id));
+        else if (this.filter !== "all") pool = all.filter(f => f.cat === this.filter);
+
+        // search scoring
+        let matches = pool
+          .map(f => ({ f, score: Utils.scoreMatch(q || " ", f.name, f.keywords) }))
+          .filter(x => q ? x.score > 0 : true);
+
+        // if no query, show top favorites or category list
+        if (!q) {
+          matches = matches
+            .map(x => ({...x, score: favs.has(x.f.id) ? 99 : 10}))
+            .sort((a,b)=>b.score-a.score);
+        } else {
+          matches.sort((a,b)=>b.score-a.score);
+        }
+
+        const top = matches.slice(0, 18).map(x => x.f);
+
+        resultsEl.classList.remove("hidden");
+        resultsEl.innerHTML = top.map(f => this.foodRow(f)).join("");
+
+        if (!top.length) {
+          resultsEl.innerHTML = `<div class="glass-soft rounded-4xl p-5 text-center">
+            <div class="font-black">No match</div>
+            <div class="text-xs muted mt-1">Try a different keyword or create a custom item.</div>
+          </div>`;
+        }
+      },
+
+      foodRow(f) {
+        const isFav = App.state.favorites.includes(f.id);
+        return `
+          <div class="glass-soft rounded-4xl p-4 flex items-center justify-between gap-3">
+            <button class="btn flex-1 text-left" onclick="Sheet.openAdd('${f.id}')">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="font-black truncate">${escapeHtml(f.name)}</div>
+                  <div class="text-[11px] muted mt-1">
+                    ${escapeHtml(f.cat)} · ${escapeHtml(f.unit)} ·
+                    P ${Utils.round1(f.pro)} · C ${Utils.round1(f.carb)} · F ${Utils.round1(f.fat)}
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-lg font-black" style="color: var(--accent2)">${Utils.round0(f.kcal)}</div>
+                  <div class="text-[10px] uppercase tracking-widest muted2 font-bold">kcal</div>
+                </div>
+              </div>
+            </button>
+
+            <button class="btn w-12 h-12 rounded-3xl glass-soft flex items-center justify-center"
+              onclick="Foods.toggleFavorite('${f.id}')"
+              title="Save">
+              <span class="text-xl">${isFav ? "★" : "☆"}</span>
+            </button>
+          </div>
+        `;
+      },
+
+      toggleFavorite(id) {
+        const favs = App.state.favorites;
+        const idx = favs.indexOf(id);
+        if (idx >= 0) favs.splice(idx, 1);
+        else favs.push(id);
+        App.save();
+        this.searchLive();
+        this.renderFavorites();
+      },
+
+      renderFavorites() {
+        const favs = new Set(App.state.favorites);
+        const q = Utils.normalize(document.getElementById("favSearch")?.value || "");
+        const list = document.getElementById("favList");
+        const all = FoodDB.getAll().filter(f => favs.has(f.id));
+
+        const filtered = q
+          ? all.filter(f => Utils.normalize(f.name).includes(q) || (f.keywords||[]).some(k => Utils.normalize(k).includes(q)))
+          : all;
+
+        if (!filtered.length) {
+          list.innerHTML = `
+            <div class="glass rounded-4xl p-6 text-center">
+              <div class="font-black">No saved foods</div>
+              <div class="text-xs muted mt-1">Go to Today → search → tap ★ to save items here.</div>
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = filtered
+          .sort((a,b)=>a.name.localeCompare(b.name))
+          .map(f => `
+            <button class="btn w-full glass rounded-4xl p-4 text-left"
+              onclick="(App.setMeal(App.state.ui.currentMeal), Sheet.openAdd('${f.id}'))">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="font-black truncate">${escapeHtml(f.name)}</div>
+                  <div class="text-[11px] muted mt-1">${escapeHtml(f.cat)} · ${escapeHtml(f.unit)}</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-black" style="color: var(--accent)">${Utils.round0(f.kcal)} kcal</div>
+                  <div class="text-[11px] muted2">Tap to add</div>
+                </div>
+              </div>
+            </button>
+          `).join("");
+      }
+    };
+
+    const Sheet = {
+      mode: "add", // add/edit
+      qty: 1.0,
+      food: null,
+      editingLogId: null,
+
+      openAdd(foodId) {
+        const f = FoodDB.getAll().find(x => x.id === foodId);
+        if (!f) return;
+
+        this.mode = "add";
+        this.food = f;
+        this.qty = 1.0;
+        this.editingLogId = null;
+
+        document.getElementById("sheetMode").innerText = "Add";
+        document.getElementById("sheetMealName").innerText = App.state.ui.currentMeal;
+        document.getElementById("sheetName").innerText = f.name;
+        document.getElementById("sheetMeta").innerText = `${f.kcal} kcal · P ${f.pro} · C ${f.carb} · F ${f.fat} per ${f.unit}`;
+        document.getElementById("sheetUnit").innerText = f.unit;
+
+        this.refreshFavButton();
+        this.recalc();
+
+        UI.open("foodSheet");
+      },
+
+      openEdit(logId) {
+        const logs = App.todayLogs();
+        const log = logs.find(x => x.id === logId);
+        if (!log) return;
+
+        this.mode = "edit";
+        this.editingLogId = logId;
+        this.qty = Number(log.qty) || 1;
+
+        // reconstruct “food-like” from log
+        this.food = {
+          id: log.foodId || ("log_"+logId),
+          name: log.name,
+          cat: log.cat || "Custom",
+          unit: log.unit || "serving",
+          // derive per-serving values from logged totals / qty
+          kcal: log.kcal / this.qty,
+          pro: log.pro / this.qty,
+          carb: log.carb / this.qty,
+          fat: log.fat / this.qty,
+          fiber: (log.fiber||0) / this.qty,
+          sugar: (log.sugar||0) / this.qty,
+          sodium: (log.sodium||0) / this.qty
+        };
+
+        document.getElementById("sheetMode").innerText = "Edit";
+        document.getElementById("sheetMealName").innerText = log.meal;
+        document.getElementById("sheetName").innerText = log.name;
+        document.getElementById("sheetMeta").innerText = `Editing logged item · per ${log.unit || "serving"}`;
+        document.getElementById("sheetUnit").innerText = log.unit || "serving";
+
+        this.refreshFavButton();
+        this.recalc();
+
+        UI.open("foodSheet");
+      },
+
+      setQty(v) {
+        this.qty = Utils.round1(Number(v) || 1);
+        this.qty = Utils.clamp(this.qty, 0.25, 50);
+        this.recalc();
+      },
+
+      adjust(delta) {
+        this.qty = Utils.round1((Number(this.qty) || 1) + delta);
+        this.qty = Utils.clamp(this.qty, 0.25, 50);
+        this.recalc();
+      },
+
+      recalc() {
+        document.getElementById("sheetQty").innerText = this.qty.toFixed(2).replace(/\.00$/,'').replace(/0$/,'');
+        const f = this.food;
+        const q = this.qty;
+
+        const kcal = Utils.round0((f.kcal || 0) * q);
+        const pro  = Utils.round0((f.pro  || 0) * q);
+        const carb = Utils.round0((f.carb || 0) * q);
+        const fat  = Utils.round0((f.fat  || 0) * q);
+        const fiber= Utils.round0((f.fiber|| 0) * q);
+        const sugar= Utils.round0((f.sugar|| 0) * q);
+
+        document.getElementById("sheetCal").innerText = kcal;
+        document.getElementById("sheetMacros").innerText = `P ${pro} · C ${carb} · F ${fat}`;
+        document.getElementById("sheetMore").innerText = `Fiber ${fiber}g · Sugar ${sugar}g`;
+      },
+
+      commit() {
+        const f = this.food;
+        const q = this.qty;
+
+        const entry = {
+          id: crypto.randomUUID(),
+          meal: App.state.ui.currentMeal,
+          foodId: f.id,
+          name: f.name,
+          cat: f.cat,
+          unit: f.unit,
+          qty: q,
+          kcal: Utils.round0((f.kcal || 0) * q),
+          pro: Utils.round0((f.pro || 0) * q),
+          carb: Utils.round0((f.carb || 0) * q),
+          fat: Utils.round0((f.fat || 0) * q),
+          fiber: Utils.round0((f.fiber || 0) * q),
+          sugar: Utils.round0((f.sugar || 0) * q),
+          sodium: Utils.round0((f.sodium || 0) * q),
+          ts: Date.now()
+        };
+
+        if (this.mode === "edit" && this.editingLogId) {
+          // update existing log (keep id)
+          const patch = { ...entry, id: this.editingLogId, meal: App.todayLogs().find(x=>x.id===this.editingLogId)?.meal || entry.meal };
+          App.updateLog(this.editingLogId, patch);
+        } else {
+          App.addLog(entry);
+        }
+
+        // record “recently used” in state.ui (tiny recents)
+        App.state.ui.recents ||= [];
+        const rec = App.state.ui.recents.filter(x => x !== f.id);
+        rec.unshift(f.id);
+        App.state.ui.recents = rec.slice(0, 12);
+        App.save();
+
+        UI.closeSheets();
+        document.getElementById("searchInput").value = "";
+        document.getElementById("searchResults").classList.add("hidden");
+      },
+
+      toggleFavorite() {
+        if (!this.food?.id) return;
+        Foods.toggleFavorite(this.food.id);
+        this.refreshFavButton();
+      },
+
+      refreshFavButton() {
+        const isFav = App.state.favorites.includes(this.food?.id);
+        document.getElementById("favBtnText").textContent = isFav ? "★ Saved" : "★ Save";
+      }
+    };
+
+    const Actions = {
+      quickAdd(foodName) {
+        // Find by name
+        const all = FoodDB.getAll();
+        const f = all.find(x => x.name === foodName);
+        if (!f) return alert("Food not found in DB.");
+        Sheet.openAdd(f.id);
+      },
+
+      quickAddRecent() {
+        const rec = (App.state.ui.recents || [])[0];
+        if (!rec) {
+          UI.open("templatesSheet");
+          return;
+        }
+        Sheet.openAdd(rec);
+      },
+
+      openTemplates() { UI.open("templatesSheet"); },
+
+      resetDay() {
+        if (!confirm("Reset today’s logs?")) return;
+        const today = Utils.todayKey();
+        App.state.days[today] = { logs: [] };
+        App.save();
+        Renderer.renderAll();
+      },
+
+      resetOnlyToday() {
+        if (!confirm("Clear only today?")) return;
+        this.resetDay();
+        UI.closeSheets();
+      },
+
+      setGoalPreset(v) { document.getElementById("sGoal").value = v; },
+
+      saveSettings() {
+        const goal = Number(document.getElementById("sGoal").value) || 1650;
+        const pro  = Number(document.getElementById("sPro").value) || 130;
+        const carb = Number(document.getElementById("sCarb").value) || 170;
+        const fat  = Number(document.getElementById("sFat").value) || 55;
+        const mode = document.getElementById("sMode").value || "Cut";
+
+        App.state.settings.goalKcal = Utils.clamp(Math.round(goal), 800, 5000);
+        App.state.settings.targetPro = Utils.clamp(Math.round(pro), 0, 400);
+        App.state.settings.targetCarb = Utils.clamp(Math.round(carb), 0, 600);
+        App.state.settings.targetFat = Utils.clamp(Math.round(fat), 0, 200);
+        App.state.settings.mode = mode;
+
+        App.save();
+        Renderer.renderAll();
+        UI.closeSheets();
+      },
+
+      prefillExample() {
+        document.getElementById("cName").value = "Homemade Oats Bowl";
+        document.getElementById("cUnit").value = "1 bowl";
+        document.getElementById("cKcal").value = 380;
+        document.getElementById("cPro").value = 22;
+        document.getElementById("cCarb").value = 45;
+        document.getElementById("cFat").value = 12;
+        document.getElementById("cFiber").value = 8;
+        document.getElementById("cSugar").value = 10;
+      },
+
+      saveCustomFood() {
+        const name = (document.getElementById("cName").value || "").trim();
+        const unit = (document.getElementById("cUnit").value || "1 serving").trim();
+        const kcal = Number(document.getElementById("cKcal").value);
+        const pro  = Number(document.getElementById("cPro").value) || 0;
+        const carb = Number(document.getElementById("cCarb").value) || 0;
+        const fat  = Number(document.getElementById("cFat").value) || 0;
+        const fiber= Number(document.getElementById("cFiber").value) || 0;
+        const sugar= Number(document.getElementById("cSugar").value) || 0;
+
+        if (!name || !kcal || kcal <= 0) {
+          alert("Please enter at least Name + Calories.");
+          return;
+        }
+
+        const id = "custom_" + crypto.randomUUID().slice(0, 8);
+        const food = {
+          id,
+          name: `${name} (${unit})`,
+          cat: "Custom",
+          unit,
+          kcal: Utils.round1(kcal),
+          pro: Utils.round1(pro),
+          carb: Utils.round1(carb),
+          fat: Utils.round1(fat),
+          fiber: Utils.round1(fiber),
+          sugar: Utils.round1(sugar),
+          sodium: 0,
+          keywords: ["custom", name]
+        };
+
+        App.state.customFoods.unshift(food);
+        App.save();
+
+        // Add immediately
+        UI.closeSheets();
+        Sheet.openAdd(id);
+      },
+
+      exportData() {
+        const blob = {
+          exportedAt: new Date().toISOString(),
+          data: App.state
+        };
+        const text = JSON.stringify(blob, null, 2);
+
+        // Copy to clipboard if possible
+        navigator.clipboard?.writeText(text).then(() => {
+          alert("Export copied to clipboard ✅\nPaste into Notes/Drive.");
+        }).catch(() => {
+          prompt("Copy this JSON:", text);
+        });
+      },
+
+      importData() {
+        const raw = prompt("Paste exported JSON here:");
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          const data = parsed.data || parsed; // accept either format
+          App.state = App.migrate(data);
+          App.save();
+          Renderer.renderAll();
+          alert("Import successful ✅");
+        } catch (e) {
+          alert("Import failed. Invalid JSON.");
+        }
+      },
+
+      clearAll() {
+        if (!confirm("Factory reset? This clears everything.")) return;
+        Storage.wipe();
+        location.reload();
+      }
+    };
+
+    const TemplatesUI = {
+      render() {
+        const list = document.getElementById("templatesList");
+        if (!list) return;
+
+        list.innerHTML = Templates.defaults.map((t, idx) => `
+          <button class="btn w-full glass-soft rounded-4xl p-4 text-left" onclick="TemplatesUI.apply(${idx})">
+            <div class="font-black text-lg">${escapeHtml(t.name)}</div>
+            <div class="text-xs muted mt-1">${t.items.map(i => `${escapeHtml(i.foodName)} × ${i.qty}`).join(" · ")}</div>
+            <div class="mt-2 pill inline-block rounded-full px-3 py-1 text-[11px] font-black">Add to ${escapeHtml(App.state.ui.currentMeal)}</div>
+          </button>
+        `).join("");
+      },
+
+      apply(idx) {
+        const t = Templates.defaults[idx];
+        const all = FoodDB.getAll();
+        const meal = App.state.ui.currentMeal;
+
+        for (const it of t.items) {
+          const f = all.find(x => x.name === it.foodName);
+          if (!f) continue;
+
+          const q = Number(it.qty) || 1;
+          App.addLog({
+            id: crypto.randomUUID(),
+            meal,
+            foodId: f.id,
+            name: f.name,
+            cat: f.cat,
+            unit: f.unit,
+            qty: q,
+            kcal: Utils.round0(f.kcal * q),
+            pro: Utils.round0(f.pro * q),
+            carb: Utils.round0(f.carb * q),
+            fat: Utils.round0(f.fat * q),
+            fiber: Utils.round0((f.fiber||0) * q),
+            sugar: Utils.round0((f.sugar||0) * q),
+            sodium: Utils.round0((f.sodium||0) * q),
+            ts: Date.now()
+          });
+        }
+
+        UI.closeSheets();
+        Renderer.renderAll();
+      }
+    };
+
+    const Insights = {
+      kcalChart: null,
+      macroChart: null,
+
+      historyRange(days=7) {
+        // Gather last N days (including today)
+        const keys = Object.keys(App.state.days).sort();
+        const last = keys.slice(-days);
+
+        const rows = last.map(k => {
+          const logs = (App.state.days[k]?.logs || []);
+          const t = logs.reduce((acc,l)=>{acc.kcal+=l.kcal; acc.pro+=l.pro; acc.carb+=l.carb; acc.fat+=l.fat; return acc;},{kcal:0,pro:0,carb:0,fat:0});
+          return { date: k, ...t };
+        });
+
+        // Ensure includes today even if empty
+        const today = Utils.todayKey();
+        if (!rows.find(r => r.date === today)) {
+          rows.push({ date: today, kcal:0, pro:0, carb:0, fat:0 });
+        }
+        return rows.slice(-days);
+      },
+
+      calculateStreak() {
+        // streak = consecutive days (including today) where kcal within 90%..110% goal
+        const goal = App.state.settings.goalKcal;
+        const keys = Object.keys(App.state.days).sort().reverse();
+        let streak = 0;
+
+        const today = new Date();
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const key = d.toISOString().split("T")[0];
+
+          const logs = (App.state.days[key]?.logs || []);
+          const kcal = logs.reduce((s,l)=>s+l.kcal,0);
+
+          // stop if missing day AFTER streak started
+          if (!logs.length && i !== 0) break;
+
+          if (kcal >= goal * 0.9 && kcal <= goal * 1.1) streak++;
+          else break;
+        }
+        return streak;
+      },
+
+      render() {
+        const rows = this.historyRange(7);
+        const labels = rows.map(r => {
+          const d = new Date(r.date + "T00:00:00");
+          return d.toLocaleDateString(undefined, { month:"short", day:"numeric" });
+        });
+
+        const avg = rows.length ? Math.round(rows.reduce((s,r)=>s+r.kcal,0)/rows.length) : 0;
+        document.getElementById("avgKcal").innerText = avg;
+        document.getElementById("streakDays").innerText = this.calculateStreak();
+
+        // Charts
+        this.renderKcalChart(labels, rows.map(r=>r.kcal));
+        this.renderMacroChart(["Protein","Carbs","Fat"], [
+          rows.reduce((s,r)=>s+r.pro,0),
+          rows.reduce((s,r)=>s+r.carb,0),
+          rows.reduce((s,r)=>s+r.fat,0)
+        ]);
+      },
+
+      renderKcalChart(labels, kcals) {
+        const ctx = document.getElementById("chartKcal").getContext("2d");
+        if (this.kcalChart) this.kcalChart.destroy();
+
+        const goal = App.state.settings.goalKcal;
+
+        this.kcalChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "Calories",
+              data: kcals,
+              borderColor: "rgba(139,211,199,0.95)",
+              backgroundColor: "rgba(139,211,199,0.14)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 3
+            },{
+              label: "Goal",
+              data: labels.map(()=>goal),
+              borderColor: "rgba(107,212,255,0.8)",
+              borderDash: [6,6],
+              pointRadius: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') } }
+            },
+            scales: {
+              x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted2') }, grid: { display:false } },
+              y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted2') }, grid: { color: "rgba(255,255,255,0.06)" }, beginAtZero:true }
+            }
+          }
+        });
+      },
+
+      renderMacroChart(labels, data) {
+        const ctx = document.getElementById("chartMacros").getContext("2d");
+        if (this.macroChart) this.macroChart.destroy();
+
+        this.macroChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels,
+            datasets: [{
+              data,
+              backgroundColor: [
+                "rgba(139,211,199,0.85)",
+                "rgba(107,212,255,0.75)",
+                "rgba(255,90,95,0.70)"
+              ],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom", labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') } }
+            }
+          }
+        });
+      }
+    };
+
+    // Small helpers
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    // Boot
+    App.init();
+
+    // Default filter state
+    Foods.setFilter(App.state.ui.foodFilter || "all");
+
+    // Close sheets on ESC
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") UI.closeSheets();
+    });
+
+    // If user switches meal, keep sheet button label fresh
+    const originalSetMeal = App.setMeal.bind(App);
+    App.setMeal = (meal) => {
+      originalSetMeal(meal);
+      const label = document.getElementById("sheetMealName");
+      if (label) label.innerText = meal;
+    };
+
+    // Keep Templates sheet updated when meal changes
+    const originalRenderTabs = Renderer.renderTabs.bind(Renderer);
+    Renderer.renderTabs = () => { originalRenderTabs(); TemplatesUI.render(); };
+  </script>
+</body>
+</html>
