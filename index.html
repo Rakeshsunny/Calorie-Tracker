@@ -3,1666 +3,963 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <title>Mission 72 | Nutrition Tracker</title>
+  <meta name="theme-color" content="#000000">
+  <title>Mission 72 | Elite</title>
 
-  <!-- Tailwind + Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* FORCE DARK THEME (no auto light mode) */
-    :root{
-      --bg: #0b0f14;
-      --card: rgba(255,255,255,0.06);
-      --card2: rgba(255,255,255,0.085);
-      --stroke: rgba(255,255,255,0.10);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.55);
-      --muted2: rgba(255,255,255,0.35);
-      --accent: #8bd3c7;     /* mint */
-      --accent2:#6bd4ff;     /* sky */
-      --danger:#ff5a5f;
-      --ok:#34d399;
-      --shadow: 0 20px 60px rgba(0,0,0,0.45);
-      color-scheme: dark;
-    }
+    .view{display:none}
+    .view.active-view{display:block!important}
 
-    html, body { height: 100%; }
     body{
-      background: radial-gradient(1200px 900px at 30% -10%, rgba(139,211,199,0.22), transparent 55%),
-                  radial-gradient(1100px 800px at 85% 5%, rgba(107,212,255,0.18), transparent 55%),
-                  radial-gradient(900px 700px at 15% 85%, rgba(255,90,95,0.10), transparent 45%),
-                  var(--bg);
-      color: var(--text);
-      -webkit-tap-highlight-color: transparent;
-      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      overflow-x: hidden;
+      background:#000;color:#f4f4f5;font-family:ui-sans-serif,system-ui,sans-serif;
+      height:100dvh;width:100vw;display:flex;flex-direction:column;overflow:hidden
     }
-    ::-webkit-scrollbar{ display:none; }
-
-    .glass { background: var(--card); border: 1px solid var(--stroke); box-shadow: var(--shadow); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-    .glass-soft { background: var(--card2); border: 1px solid var(--stroke); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-    .hairline { border: 1px solid var(--stroke); }
-    .muted { color: var(--muted); }
-    .muted2 { color: var(--muted2); }
-
-    .pill { border: 1px solid var(--stroke); }
-    .chip { border: 1px solid var(--stroke); }
-    .chip.active { border-color: rgba(139,211,199,0.55); background: rgba(139,211,199,0.14); }
-
-    .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 92px); }
-    .safe-bottom-tab { padding-bottom: env(safe-area-inset-bottom); }
-
-    .sheet-backdrop { background: rgba(0,0,0,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-
-    .btn { transition: transform .08s ease, background .2s ease, opacity .2s ease; }
-    .btn:active { transform: scale(0.98); }
-
-    .fade-in { animation: fadeIn .18s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
-
-    /* --- App View System (smooth navigation + no overlap) --- */
-    .app-view{
-      position: fixed;
-      inset: 0;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      opacity: 0;
-      transform: translateX(14px);
-      pointer-events: none;
-      transition: opacity .22s ease, transform .22s ease;
-      z-index: 40;
+    #scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 40px 20px;z-index:10}
+    #nav-bar{
+      height:calc(80px + env(safe-area-inset-bottom));
+      background:#09090b;border-top:1px solid #27272a;
+      display:flex;justify-content:space-around;align-items:center;
+      padding-bottom:env(safe-area-inset-bottom);flex-shrink:0;z-index:50
     }
-    .app-view.enter-left{ transform: translateX(-14px); }
-    .app-view.enter-right{ transform: translateX(14px); }
-    .app-view.active{
-      opacity: 1;
-      transform: translateX(0);
-      pointer-events: auto;
+    .glass-card{background:#121212;border:1px solid #27272a;border-radius:24px}
+    .nav-btn{color:#52525b;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:800;font-size:9px;width:25%;transition:color .2s}
+    .nav-btn.active{color:#fff}
+    .nav-btn.active i{color:#3b82f6}
+    ::-webkit-scrollbar{display:none}
+    .btn-press:active{transform:scale(.96)}
+
+    .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none}
+    .sheet{
+      position:fixed;bottom:0;left:0;right:0;background:#09090b;border-top:1px solid #27272a;
+      border-radius:32px 32px 0 0;z-index:101;padding:24px;transform:translateY(100%);
+      transition:transform .3s ease;max-height:85vh;overflow-y:auto
     }
-
-    /* Bottom nav always above views */
-    nav{ z-index: 60; }
-
-    /* Sheets above everything */
-    #sheetBackdrop{ z-index: 80; }
-    #foodSheet, #customSheet, #settingsSheet, #templatesSheet{ z-index: 90; }
-
-    @media (prefers-reduced-motion: reduce){
-      .app-view{ transition: none; transform: none; }
+    .sheet.open{transform:translateY(0)}
+    input, select{
+      background:#121212;border:1px solid #27272a;border-radius:12px;padding:12px;color:#fff;outline:none;width:100%;font-size:14px
     }
+    .sync-spin{animation:spin 1s linear infinite}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;
+      border:1px solid #27272a;background:#0b0b0f;color:#d4d4d8;font-weight:800;font-size:11px
+    }
+    .barwrap{height:10px;border-radius:999px;background:#0b0b0f;border:1px solid #27272a;overflow:hidden}
+    .barfill{height:100%;border-radius:999px}
+    .segbtn{flex:1;padding:10px 12px;border-radius:14px;font-weight:900;font-size:11px}
   </style>
-
-  <script>
-    tailwind.config = { theme: { extend: { borderRadius: { '4xl': '2rem' } } } };
-  </script>
 </head>
 
-<body class="min-h-screen">
+<body>
+  <div id="scroll-area">
 
-  <!-- TODAY VIEW -->
-  <div id="todayView" class="app-view active enter-right" aria-hidden="false">
-    <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
-
-      <!-- Top Bar -->
-      <header class="flex items-center justify-between mb-4">
+    <!-- HOME -->
+    <div id="view-home" class="view active-view">
+      <header class="flex justify-between items-center mb-6 pt-2">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl glass-soft flex items-center justify-center">
-            <span class="text-xl">🍏</span>
+          <div class="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-500">
+            <i class="ph-fill ph-rocket-launch text-2xl"></i>
           </div>
           <div>
-            <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Mission 72</div>
-            <div class="text-lg font-black tracking-tight">Today</div>
+            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Mission 72</div>
+            <div class="text-lg font-black text-white">72.0 kg Goal</div>
           </div>
         </div>
-
-        <div class="flex items-center gap-2">
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.open('settingsSheet')">
-            ⚙️
-          </button>
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="Actions.quickAddRecent()">
-            ➕
-          </button>
-        </div>
-      </header>
-
-      <!-- Hero Card -->
-      <section class="glass rounded-4xl p-5 relative overflow-hidden mb-4">
-        <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full" style="background: radial-gradient(circle at 30% 30%, rgba(139,211,199,0.45), transparent 60%);"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 rounded-full" style="background: radial-gradient(circle at 40% 40%, rgba(107,212,255,0.35), transparent 60%);"></div>
-
-        <div class="relative z-10 flex items-center justify-between gap-4">
-          <div class="min-w-0">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted font-semibold">Remaining</div>
-            <div class="text-6xl font-black tracking-tighter leading-[0.95]" id="kcalRemaining">1650</div>
-            <div class="text-xs muted mt-2">
-              Goal <span class="font-bold" id="kcalGoalText">1650</span> kcal ·
-              <span class="font-semibold" id="goalModeText">Cut</span>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span class="pill rounded-full px-3 py-1 text-[11px] font-semibold" id="statusChip">On track</span>
-              <span class="pill rounded-full px-3 py-1 text-[11px] font-semibold muted" id="streakChip">🔥 0-day streak</span>
-            </div>
-          </div>
-
-          <!-- Ring -->
-          <div class="relative w-[108px] h-[108px] flex items-center justify-center shrink-0">
-            <svg class="w-full h-full -rotate-90">
-              <circle cx="54" cy="54" r="44" stroke="rgba(255,255,255,0.10)" stroke-width="10" fill="transparent"></circle>
-              <circle id="ring" cx="54" cy="54" r="44" stroke="url(#grad)" stroke-width="10" fill="transparent"
-                stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46" class="transition-all duration-700"></circle>
-              <defs>
-                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="var(--accent)"/>
-                  <stop offset="100%" stop-color="var(--accent2)"/>
-                </linearGradient>
-              </defs>
-            </svg>
-            <div class="absolute text-center">
-              <div class="text-xl font-black" id="ringPct">0%</div>
-              <div class="text-[10px] uppercase tracking-widest muted2 font-semibold">used</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Macro mini -->
-        <div class="relative z-10 mt-5 grid grid-cols-3 gap-2">
-          <div class="glass-soft rounded-2xl p-3 text-center">
-            <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Protein</div>
-            <div class="text-xl font-black mt-1"><span id="mPro">0</span><span class="text-xs muted ml-0.5">g</span></div>
-            <div class="text-[10px] muted2 mt-1"><span id="tPro">—</span> target</div>
-          </div>
-          <div class="glass-soft rounded-2xl p-3 text-center">
-            <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Carbs</div>
-            <div class="text-xl font-black mt-1"><span id="mCarb">0</span><span class="text-xs muted ml-0.5">g</span></div>
-            <div class="text-[10px] muted2 mt-1"><span id="tCarb">—</span> target</div>
-          </div>
-          <div class="glass-soft rounded-2xl p-3 text-center">
-            <div class="text-[10px] uppercase tracking-widest muted2 font-bold">Fat</div>
-            <div class="text-xl font-black mt-1"><span id="mFat">0</span><span class="text-xs muted ml-0.5">g</span></div>
-            <div class="text-[10px] muted2 mt-1"><span id="tFat">—</span> target</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tabs -->
-      <section class="glass-soft rounded-3xl p-1.5 mb-4 flex gap-1" data-no-swipe>
-        <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Breakfast" onclick="App.setMeal('Breakfast')">Breakfast</button>
-        <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Lunch" onclick="App.setMeal('Lunch')">Lunch</button>
-        <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Snack" onclick="App.setMeal('Snack')">Snack</button>
-        <button class="btn flex-1 rounded-2xl py-3 text-xs font-black tracking-wide pill" id="tab-Dinner" onclick="App.setMeal('Dinner')">Dinner</button>
-      </section>
-
-      <!-- Search + Quick Actions -->
-      <section class="glass rounded-4xl p-4 mb-4" data-no-swipe>
         <div class="flex gap-2">
-          <div class="flex-1 relative">
-            <input id="searchInput" type="text" placeholder="Search foods (apple, banana, sambar...)"
-              class="w-full bg-transparent px-4 py-4 rounded-3xl hairline outline-none text-sm font-semibold placeholder:opacity-60"
-              oninput="Foods.searchLive()"
-            />
-            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-lg muted">🔎</div>
-          </div>
-
-          <button class="btn rounded-3xl px-4 py-4 font-black glass-soft" onclick="UI.open('customSheet')">
-            Custom
+          <button onclick="Cloud.pullLatest()" id="pull-btn" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-sky-400" title="Pull from Cloud">
+            <i class="ph-bold ph-cloud-arrow-down"></i>
+          </button>
+          <button onclick="Cloud.push()" id="sync-btn" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-emerald-500" title="Push to Cloud">
+            <i class="ph-bold ph-cloud-arrow-up"></i>
+          </button>
+          <button onclick="UI.open('settings')" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-zinc-400" title="Settings">
+            <i class="ph ph-gear text-xl"></i>
           </button>
         </div>
-
-        <!-- Filters -->
-        <div class="mt-3 flex gap-2 overflow-x-auto pb-1" data-no-swipe>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold active" id="chip-all" onclick="Foods.setFilter('all')">All</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-fav" onclick="Foods.setFilter('fav')">★ Saved</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-fruit" onclick="Foods.setFilter('Fruit')">Fruit</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-protein" onclick="Foods.setFilter('Protein')">Protein</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-indian" onclick="Foods.setFilter('Indian')">Indian</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-staple" onclick="Foods.setFilter('Staple')">Staples</button>
-          <button class="btn chip rounded-full px-3 py-2 text-[11px] font-bold" id="chip-snack" onclick="Foods.setFilter('Snack')">Snacks</button>
-        </div>
-
-        <!-- Results -->
-        <div id="searchResults" class="mt-3 space-y-2 hidden"></div>
-
-        <!-- Quick Add -->
-        <div class="mt-4 pt-4 border-t" style="border-color: var(--stroke);">
-          <div class="flex items-center justify-between">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Quick add</div>
-            <button class="text-[11px] font-bold muted underline underline-offset-4" onclick="Actions.openTemplates()">Templates</button>
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Boiled Egg (1 large)')">
-              <div class="font-black">🥚 Boiled Egg</div>
-              <div class="text-[11px] muted mt-1">78 kcal · 6P</div>
-            </button>
-            <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Chicken Breast (150g)')">
-              <div class="font-black">🍗 Chicken</div>
-              <div class="text-[11px] muted mt-1">250 kcal · 45P</div>
-            </button>
-            <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Chapati / Roti (1)')">
-              <div class="font-black">🫓 Chapati</div>
-              <div class="text-[11px] muted mt-1">70 kcal · 15C</div>
-            </button>
-            <button class="btn glass-soft rounded-3xl p-4 text-left" onclick="Actions.quickAdd('Greek Yogurt (1 cup)')">
-              <div class="font-black">🥣 Yogurt</div>
-              <div class="text-[11px] muted mt-1">130 kcal · 12P</div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Meal Log -->
-      <section class="mb-6">
-        <div class="flex items-end justify-between px-1 mb-3">
-          <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold" id="mealTitle">Lunch</div>
-            <div class="text-xl font-black tracking-tight">Log</div>
-          </div>
-          <div class="pill rounded-full px-3 py-2 text-xs font-black" id="mealTotal">0 kcal</div>
-        </div>
-
-        <div id="mealList" class="space-y-2"></div>
-
-        <button class="btn w-full mt-4 rounded-3xl py-4 text-xs font-black tracking-[0.22em] uppercase"
-          style="background: rgba(255,90,95,0.10); border:1px solid rgba(255,90,95,0.25);"
-          onclick="Actions.resetDay()">
-          Reset today
-        </button>
-      </section>
-    </div>
-  </div>
-
-  <!-- INSIGHTS VIEW -->
-  <div id="insightsView" class="app-view enter-right" aria-hidden="true">
-    <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
-      <header class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.nav('today')">←</button>
-          <div>
-            <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Insights</div>
-            <div class="text-lg font-black tracking-tight">Trends</div>
-          </div>
-        </div>
-        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="Actions.exportData()">Export</button>
       </header>
 
-      <section class="glass rounded-4xl p-5 mb-4">
-        <div class="flex items-center justify-between">
+      <div class="glass-card p-6 relative overflow-hidden mb-4">
+        <div class="flex justify-between items-center relative z-10">
           <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">7-day average</div>
-            <div class="text-3xl font-black mt-1"><span id="avgKcal">0</span> <span class="text-sm muted font-semibold">kcal</span></div>
+            <div class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Remaining</div>
+            <div class="text-6xl font-black tracking-tighter" id="val-rem">0</div>
+            <div class="mt-3 flex gap-2">
+              <span class="px-2 py-1 bg-zinc-900 rounded text-[9px] font-black text-zinc-400 uppercase">Net: <span id="val-net">0</span></span>
+              <span class="px-2 py-1 bg-blue-900/20 border border-blue-500/20 rounded text-[9px] font-black text-blue-400"><span id="header-weight">--</span> kg</span>
+            </div>
           </div>
-          <div class="text-right">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Streak</div>
-            <div class="text-3xl font-black mt-1">🔥 <span id="streakDays">0</span></div>
-          </div>
-        </div>
-
-        <div class="mt-4 h-44">
-          <canvas id="chartKcal"></canvas>
-        </div>
-      </section>
-
-      <section class="glass rounded-4xl p-5 mb-4">
-        <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold mb-3">7-day macro totals</div>
-        <div class="h-44">
-          <canvas id="chartMacros"></canvas>
-        </div>
-      </section>
-
-      <section class="glass rounded-4xl p-5">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Data</div>
-          <div class="flex gap-2">
-            <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="Actions.importData()">Import</button>
-            <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="Actions.clearAll()">Factory reset</button>
+          <div class="relative w-20 h-20 flex items-center justify-center">
+            <svg class="w-full h-full -rotate-90">
+              <circle cx="40" cy="40" r="34" stroke="#27272a" stroke-width="5" fill="transparent"/>
+              <circle id="ring-progress" cx="40" cy="40" r="34" stroke="#3b82f6" stroke-width="5" fill="transparent" stroke-dasharray="214" stroke-dashoffset="214" stroke-linecap="round"/>
+            </svg>
+            <span class="absolute text-sm font-black" id="val-pct">0%</span>
           </div>
         </div>
-        <p class="text-xs muted mt-3 leading-relaxed">
-          This app is offline-first. Everything is stored on your device (localStorage).
-          Export creates a JSON backup you can paste into Notes/Drive.
-        </p>
-      </section>
-    </div>
-  </div>
+      </div>
 
-  <!-- LIBRARY VIEW -->
-  <div id="libraryView" class="app-view enter-right" aria-hidden="true">
-    <div class="max-w-md mx-auto px-4 pt-5 safe-bottom">
-      <header class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.nav('today')">←</button>
+      <!-- Macro progress bars -->
+      <div class="glass-card p-5 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-dna text-blue-400"></i> Protein</div>
+          <div class="text-xs font-black text-zinc-500"><span id="curr-pro">0</span>/<span id="tgt-pro">130</span>g • <span id="pct-pro">0</span>%</div>
+        </div>
+        <div class="barwrap mb-4"><div id="bar-pro" class="barfill" style="width:0%;background:#3b82f6"></div></div>
+
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-fire text-amber-400"></i> Carbs</div>
+          <div class="text-xs font-black text-zinc-500"><span id="curr-carb">0</span>/<span id="tgt-carb">170</span>g • <span id="pct-carb">0</span>%</div>
+        </div>
+        <div class="barwrap mb-4"><div id="bar-carb" class="barfill" style="width:0%;background:#f59e0b"></div></div>
+
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-drop-half text-rose-400"></i> Fat</div>
+          <div class="text-xs font-black text-zinc-500"><span id="curr-fat">0</span>/<span id="tgt-fat">55</span>g • <span id="pct-fat">0</span>%</div>
+        </div>
+        <div class="barwrap"><div id="bar-fat" class="barfill" style="width:0%;background:#fb7185"></div></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="glass-card p-4 flex justify-between items-center btn-press" onclick="Data.addWater()">
           <div>
-            <div class="text-[11px] uppercase tracking-[0.22em] muted font-semibold">Library</div>
-            <div class="text-lg font-black tracking-tight">Saved foods</div>
+            <div class="text-[9px] font-black text-zinc-500 uppercase">Water</div>
+            <div class="text-lg font-black text-cyan-400"><span id="val-water">0</span><span class="text-xs text-zinc-600">/3L</span></div>
           </div>
+          <i class="ph-fill ph-drop text-cyan-500 text-xl opacity-60"></i>
         </div>
-        <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-bold" onclick="UI.open('customSheet')">Add</button>
-      </header>
+        <div class="glass-card p-4 flex justify-between items-center btn-press" onclick="UI.open('exercise')">
+          <div>
+            <div class="text-[9px] font-black text-zinc-500 uppercase">Active</div>
+            <div class="text-lg font-black text-emerald-400">+ <span id="val-burned">0</span></div>
+          </div>
+          <i class="ph-fill ph-lightning text-emerald-500 text-xl opacity-60"></i>
+        </div>
+      </div>
 
-      <section class="glass rounded-4xl p-4 mb-4" data-no-swipe>
-        <input id="favSearch" type="text" placeholder="Search saved foods..."
-          class="w-full bg-transparent px-4 py-4 rounded-3xl hairline outline-none text-sm font-semibold placeholder:opacity-60"
-          oninput="Foods.renderFavorites()"
-        />
-        <div class="mt-3 text-[11px] muted">Tap ★ in search results to save. Tap a saved item to add to your current meal.</div>
-      </section>
+      <div class="bg-[#121212] p-1 rounded-2xl flex border border-zinc-800 mb-6">
+        <button class="flex-1 py-3 text-[10px] font-black text-white bg-zinc-800 rounded-xl" onclick="App.setMeal('Breakfast')" id="btn-Breakfast">Breakfast</button>
+        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Lunch')" id="btn-Lunch">Lunch</button>
+        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Snack')" id="btn-Snack">Snack</button>
+        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Dinner')" id="btn-Dinner">Dinner</button>
+      </div>
 
-      <section class="space-y-2" id="favList"></section>
+      <div class="relative mb-4">
+        <input type="text" id="search-input" placeholder="Search food..." oninput="Foods.search()" class="w-full bg-[#121212] border border-zinc-800 text-white px-5 py-4 rounded-2xl text-sm font-semibold focus:outline-none">
+      </div>
+      <div id="search-results" class="hidden flex flex-col gap-2 mb-6"></div>
+
+      <div id="log-list" class="flex flex-col gap-2"></div>
     </div>
-  </div>
 
-  <!-- Bottom Tab Bar -->
-  <nav class="fixed bottom-0 left-0 right-0 safe-bottom-tab">
-    <div class="max-w-md mx-auto px-4 pb-3">
-      <div class="glass rounded-4xl p-2 flex justify-between items-center" data-no-swipe>
-        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs" id="nav-today" onclick="UI.nav('today')">Today</button>
-        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs muted" id="nav-insights" onclick="UI.nav('insights')">Insights</button>
-        <button class="btn flex-1 py-3 rounded-3xl font-black text-xs muted" id="nav-library" onclick="UI.nav('library')">Library</button>
+    <!-- TRENDS -->
+    <div id="view-trends" class="view">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-black">Trends</h2>
+        <div class="flex gap-2">
+          <span class="pill"><i class="ph-fill ph-gauge"></i><span id="trend-label">Daily</span></span>
+        </div>
+      </div>
+
+      <div class="bg-[#121212] p-1 rounded-2xl flex border border-zinc-800 mb-4">
+        <button id="btn-trend-day" class="segbtn bg-zinc-800 text-white" onclick="Trends.setMode('day')">Day</button>
+        <button id="btn-trend-week" class="segbtn text-zinc-400" onclick="Trends.setMode('week')">Week</button>
+        <button id="btn-trend-month" class="segbtn text-zinc-400" onclick="Trends.setMode('month')">Month</button>
+      </div>
+
+      <div class="glass-card p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-black text-zinc-200 flex items-center gap-2"><i class="ph-fill ph-chart-line-up text-emerald-400"></i> Net kcal</div>
+          <div class="text-xs text-zinc-500 font-black" id="trend-sub">Last 14 days</div>
+        </div>
+        <div class="h-48"><canvas id="chart-net"></canvas></div>
+      </div>
+
+      <div class="glass-card p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-black text-zinc-200 flex items-center gap-2"><i class="ph-fill ph-weight text-blue-400"></i> Weight</div>
+          <div class="text-xs text-zinc-500 font-black">Latest</div>
+        </div>
+        <div class="h-40"><canvas id="chart-weight"></canvas></div>
+      </div>
+
+      <div class="glass-card p-6 text-center">
+        <div class="text-xs font-black text-zinc-500 uppercase mb-2">Projected Date to 72kg</div>
+        <div class="text-3xl font-black text-blue-500" id="eta-date">Log 2+ Weights</div>
       </div>
     </div>
+
+    <!-- HISTORY -->
+    <div id="view-calendar" class="view">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-black">History</h2>
+        <button class="pill btn-press" onclick="UI.open('quickweight')"><i class="ph-fill ph-plus-circle"></i> Add Weight</button>
+      </div>
+      <div class="glass-card p-5">
+        <div id="calendar-body" class="grid grid-cols-7 gap-2"></div>
+        <div class="text-[10px] text-zinc-500 mt-4 font-bold">Tap any day to edit (water, burn, logs).</div>
+      </div>
+    </div>
+
+    <!-- LIBRARY -->
+    <div id="view-library" class="view">
+      <h2 class="text-2xl font-black mb-6">Saved Foods</h2>
+      <div id="library-list" class="space-y-2"></div>
+    </div>
+
+  </div>
+
+  <nav id="nav-bar">
+    <button class="nav-btn active" onclick="UI.nav(0, this, 'view-home')"><i class="ph-fill ph-house text-2xl"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="UI.nav(1, this, 'view-trends')"><i class="ph-fill ph-chart-line-up text-2xl"></i><span>Trends</span></button>
+    <button class="nav-btn" onclick="UI.nav(2, this, 'view-calendar')"><i class="ph-fill ph-calendar text-2xl"></i><span>History</span></button>
+    <button class="nav-btn" onclick="UI.nav(3, this, 'view-library')"><i class="ph-fill ph-books text-2xl"></i><span>Library</span></button>
   </nav>
 
-  <!-- SHEETS -->
-  <div id="sheetBackdrop" class="fixed inset-0 hidden sheet-backdrop" onclick="UI.closeSheets()"></div>
+  <div id="backdrop" class="sheet-backdrop" onclick="UI.closeAll()"></div>
 
-  <!-- Add/Edit Food Sheet -->
-  <div id="foodSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
-    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
-      <div class="glass rounded-4xl p-5">
-        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+  <!-- FOOD SHEET -->
+  <div id="sheet-food" class="sheet">
+    <div id="sheet-name" class="text-2xl font-black mb-6">Food</div>
+    <div class="bg-zinc-900 rounded-3xl p-2 flex items-center justify-between mb-8 border border-zinc-800">
+      <button onclick="Sheet.adj(-0.5)" class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl font-black">−</button>
+      <div class="text-3xl font-black tabular-nums" id="sheet-qty">1.0</div>
+      <button onclick="Sheet.adj(0.5)" class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl font-black">+</button>
+    </div>
+    <div id="sheet-total" class="text-center text-5xl font-black text-blue-500 mb-8">0 kcal</div>
+    <button onclick="Sheet.save()" class="w-full py-5 bg-white text-black font-black rounded-3xl uppercase tracking-widest text-sm btn-press">Save to Day</button>
+  </div>
 
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold" id="sheetMode">Add</div>
-            <div class="text-2xl font-black tracking-tight truncate" id="sheetName">Food</div>
-            <div class="text-xs muted mt-1" id="sheetMeta">per serving</div>
-          </div>
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
-        </div>
+  <!-- SETTINGS SHEET -->
+  <div id="sheet-settings" class="sheet">
+    <h3 class="text-xl font-black mb-2">Cloud Sync (Secure)</h3>
+    <div class="text-xs text-zinc-500 font-bold mb-6">Tip: Use a long secret key (20+ chars). Keep it private.</div>
 
-        <!-- Quantity -->
-        <div class="mt-4 glass-soft rounded-4xl p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Quantity</div>
-              <div class="text-3xl font-black mt-1" id="sheetQty">1.0</div>
-              <div class="text-xs muted" id="sheetUnit">servings</div>
-            </div>
-            <div class="flex gap-2">
-              <button class="btn glass-soft w-12 h-12 rounded-2xl text-xl font-black" onclick="Sheet.adjust(-0.25)">−</button>
-              <button class="btn glass-soft w-12 h-12 rounded-2xl text-xl font-black" onclick="Sheet.adjust(0.25)">+</button>
-            </div>
-          </div>
+    <label class="text-xs font-black text-zinc-500">Google Web App URL</label>
+    <input id="s-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="mb-4">
 
-          <div class="mt-4 grid grid-cols-4 gap-2">
-            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(0.5)">0.5</button>
-            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(1)">1</button>
-            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(1.5)">1.5</button>
-            <button class="btn pill rounded-2xl py-2 text-[11px] font-black" onclick="Sheet.setQty(2)">2</button>
-          </div>
-        </div>
+    <label class="text-xs font-black text-zinc-500">Secret Key</label>
+    <input id="s-key" type="password" placeholder="Your SECRET_KEY" class="mb-4">
 
-        <!-- Nutrition -->
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          <div class="glass-soft rounded-3xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Calories</div>
-            <div class="text-2xl font-black mt-1"><span id="sheetCal">0</span> <span class="text-xs muted font-semibold">kcal</span></div>
-          </div>
-          <div class="glass-soft rounded-3xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Macros</div>
-            <div class="text-sm font-black mt-1" id="sheetMacros">P0 · C0 · F0</div>
-            <div class="text-[11px] muted2 mt-1" id="sheetMore">Fiber 0g · Sugar 0g</div>
-          </div>
-        </div>
+    <label class="text-xs font-black text-zinc-500">Device ID (optional)</label>
+    <input id="s-device" type="text" placeholder="auto-generated if empty" class="mb-4">
 
-        <!-- Actions -->
-        <div class="mt-3 flex gap-2">
-          <button class="btn flex-1 rounded-3xl py-4 font-black" style="background: rgba(139,211,199,0.16); border:1px solid rgba(139,211,199,0.35);" onclick="Sheet.toggleFavorite()">
-            <span id="favBtnText">★ Save</span>
-          </button>
-          <button class="btn flex-[1.2] rounded-3xl py-4 font-black" style="background: rgba(107,212,255,0.16); border:1px solid rgba(107,212,255,0.35);" onclick="Sheet.commit()">
-            Add to <span id="sheetMealName">Lunch</span>
-          </button>
-        </div>
-
-        <div class="mt-3 text-[11px] muted">
-          Tip: tap a logged item to edit quantity (or delete).
-        </div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div>
+        <label class="text-xs font-black text-zinc-500">Daily Cal Goal</label>
+        <input id="s-cal" type="number" placeholder="1650">
       </div>
+      <div>
+        <label class="text-xs font-black text-zinc-500">Protein Target (g)</label>
+        <input id="s-pro" type="number" placeholder="130">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-6">
+      <div>
+        <label class="text-xs font-black text-zinc-500">Carb Target (g)</label>
+        <input id="s-carb" type="number" placeholder="170">
+      </div>
+      <div>
+        <label class="text-xs font-black text-zinc-500">Fat Target (g)</label>
+        <input id="s-fat" type="number" placeholder="55">
+      </div>
+    </div>
+
+    <button onclick="Data.saveSettings()" class="w-full py-4 bg-blue-600 text-white font-black rounded-2xl btn-press">Update Profile</button>
+
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <button onclick="Cloud.pullLatest()" class="w-full py-4 bg-zinc-800 text-white font-black rounded-2xl btn-press"><i class="ph-bold ph-cloud-arrow-down"></i> Pull</button>
+      <button onclick="Cloud.push()" class="w-full py-4 bg-emerald-600 text-black font-black rounded-2xl btn-press"><i class="ph-bold ph-cloud-arrow-up"></i> Push</button>
+    </div>
+
+    <button onclick="Data.resetAll()" class="w-full py-4 mt-6 text-red-500 font-black text-xs uppercase tracking-widest">Wipe Local Data</button>
+  </div>
+
+  <!-- EXERCISE SHEET -->
+  <div id="sheet-exercise" class="sheet">
+    <h3 class="text-xl font-black mb-6">Add Activity</h3>
+    <div class="grid grid-cols-2 gap-3">
+      <button onclick="Data.addExercise('Cricket', 450)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🏏 Cricket <span class="block text-xs text-zinc-500">+450</span></button>
+      <button onclick="Data.addExercise('Tennis', 350)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🎾 Tennis <span class="block text-xs text-zinc-500">+350</span></button>
+      <button onclick="Data.addExercise('Hiking', 500)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🥾 Hiking <span class="block text-xs text-zinc-500">+500</span></button>
+      <button onclick="Data.addExercise('Workout', 200)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🏃 Workout <span class="block text-xs text-zinc-500">+200</span></button>
     </div>
   </div>
 
-  <!-- Custom Food Sheet -->
-  <div id="customSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
-    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
-      <div class="glass rounded-4xl p-5">
-        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
-
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Custom food</div>
-            <div class="text-2xl font-black tracking-tight">Create</div>
-            <div class="text-xs muted mt-1">Enter per 1 serving. You can adjust servings after.</div>
-          </div>
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <input id="cName" class="col-span-2 bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Name (e.g., Homemade Upma)" />
-          <input id="cUnit" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Serving (e.g., 1 bowl)" />
-          <input id="cKcal" type="number" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Calories" />
-          <input id="cPro" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Protein (g)" />
-          <input id="cCarb" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Carbs (g)" />
-          <input id="cFat" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Fat (g)" />
-          <input id="cFiber" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Fiber (g) optional" />
-          <input id="cSugar" type="number" step="0.1" class="bg-transparent hairline rounded-3xl px-4 py-4 text-sm font-semibold outline-none" placeholder="Sugar (g) optional" />
-        </div>
-
-        <div class="mt-3 flex gap-2">
-          <button class="btn flex-1 rounded-3xl py-4 font-black" style="background: rgba(255,255,255,0.06); border:1px solid var(--stroke);" onclick="Actions.prefillExample()">
-            Fill example
-          </button>
-          <button class="btn flex-[1.2] rounded-3xl py-4 font-black" style="background: rgba(139,211,199,0.16); border:1px solid rgba(139,211,199,0.35);" onclick="Actions.saveCustomFood()">
-            Save + Add
-          </button>
-        </div>
-      </div>
-    </div>
+  <!-- QUICK WEIGHT -->
+  <div id="sheet-quickweight" class="sheet">
+    <h3 class="text-xl font-black mb-4">Add Weight</h3>
+    <input id="quick-weight" type="number" step="0.1" placeholder="e.g., 78.4" class="mb-4">
+    <button onclick="Data.saveWeight()" class="w-full py-4 bg-white text-black font-black rounded-2xl btn-press">Save</button>
   </div>
 
-  <!-- Settings Sheet -->
-  <div id="settingsSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
-    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
-      <div class="glass rounded-4xl p-5">
-        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
+  <!-- EDIT DAY SHEET -->
+  <div id="sheet-editday" class="sheet">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-black">Edit Day</h3>
+      <span class="pill"><i class="ph-fill ph-calendar"></i><span id="ed-date">----</span></span>
+    </div>
 
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Settings</div>
-            <div class="text-2xl font-black tracking-tight">Goals</div>
-            <div class="text-xs muted mt-1">Set your daily targets like a pro.</div>
-          </div>
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <div class="glass-soft rounded-4xl p-4 col-span-2">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Daily calories</div>
-            <div class="mt-2 flex items-center gap-2">
-              <input id="sGoal" type="number" class="flex-1 bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
-              <button class="btn pill rounded-2xl px-3 py-3 text-xs font-black" onclick="Actions.setGoalPreset(1650)">1650</button>
-              <button class="btn pill rounded-2xl px-3 py-3 text-xs font-black" onclick="Actions.setGoalPreset(1900)">1900</button>
-            </div>
-            <div class="text-xs muted mt-2">Tip: keep it realistic. Consistency beats perfection.</div>
-          </div>
-
-          <div class="glass-soft rounded-4xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Protein target</div>
-            <input id="sPro" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
-            <div class="text-[11px] muted mt-2">grams/day</div>
-          </div>
-
-          <div class="glass-soft rounded-4xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Carb target</div>
-            <input id="sCarb" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
-            <div class="text-[11px] muted mt-2">grams/day</div>
-          </div>
-
-          <div class="glass-soft rounded-4xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Fat target</div>
-            <input id="sFat" type="number" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none" />
-            <div class="text-[11px] muted mt-2">grams/day</div>
-          </div>
-
-          <div class="glass-soft rounded-4xl p-4">
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Mode</div>
-            <select id="sMode" class="mt-2 w-full bg-transparent hairline rounded-3xl px-4 py-3 text-sm font-black outline-none">
-              <option value="Cut">Cut</option>
-              <option value="Maintain">Maintain</option>
-              <option value="Bulk">Bulk</option>
-            </select>
-            <div class="text-[11px] muted mt-2">just labels for motivation</div>
-          </div>
-
-          <div class="glass-soft rounded-4xl p-4 col-span-2">
-            <button class="btn w-full rounded-3xl py-4 font-black" style="background: rgba(107,212,255,0.16); border:1px solid rgba(107,212,255,0.35);" onclick="Actions.saveSettings()">
-              Save settings
-            </button>
-            <button class="btn w-full mt-2 rounded-3xl py-4 text-xs font-black tracking-[0.22em] uppercase"
-              style="background: rgba(255,90,95,0.10); border:1px solid rgba(255,90,95,0.25);"
-              onclick="Actions.resetOnlyToday()">
-              Clear today only
-            </button>
-          </div>
-        </div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div>
+        <label class="text-xs font-black text-zinc-500">Water steps (×250ml)</label>
+        <input id="ed-water" type="number" min="0" step="1">
+      </div>
+      <div>
+        <label class="text-xs font-black text-zinc-500">Burn kcal</label>
+        <input id="ed-burn" type="number" min="0" step="10">
       </div>
     </div>
-  </div>
 
-  <!-- Templates Sheet -->
-  <div id="templatesSheet" class="fixed left-0 right-0 bottom-0 translate-y-full transition-transform duration-300">
-    <div class="max-w-md mx-auto px-4 pb-3 safe-bottom-tab">
-      <div class="glass rounded-4xl p-5">
-        <div class="w-14 h-1 rounded-full mx-auto mb-4" style="background: rgba(255,255,255,0.18)"></div>
-
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] muted2 font-bold">Templates</div>
-            <div class="text-2xl font-black tracking-tight">One-tap meals</div>
-            <div class="text-xs muted mt-1">Industry trick: make defaults, win consistency.</div>
-          </div>
-          <button class="btn glass-soft rounded-2xl px-3 py-2 text-xs font-black" onclick="UI.closeSheets()">Done</button>
-        </div>
-
-        <div class="mt-4 space-y-2" id="templatesList"></div>
-
-        <div class="mt-3 text-[11px] muted">
-          You can edit templates in the code (Templates.defaults). This file is designed to be hacked.
-        </div>
-      </div>
+    <div class="grid grid-cols-2 gap-3 mb-6">
+      <button onclick="History.saveDayEdits()" class="py-4 bg-blue-600 text-white font-black rounded-2xl btn-press">Save Day</button>
+      <button onclick="History.deleteDay()" class="py-4 bg-zinc-900 border border-zinc-800 text-red-400 font-black rounded-2xl btn-press">Delete Day</button>
     </div>
+
+    <div class="text-xs font-black text-zinc-500 uppercase mb-2">Logs</div>
+    <div id="ed-logs" class="space-y-2"></div>
   </div>
 
   <script>
-    /**********************************************************************
-     * INDUSTRY-STYLE SINGLE-FILE APP
-     * - Offline-first (localStorage)
-     * - Search + Library + Favorites
-     * - Add/Edit sheet with stepper
-     * - Daily history for insights + charts
-     * - Export/Import JSON
-     * - Smooth nav + swipe between tabs
-     **********************************************************************/
+    /* ---------- Food DB ---------- */
+    var DB = [
+      {id:'egg',n:'Boiled Egg',u:'1 large',c:78,p:6,cb:0,f:5},
+      {id:'chick',n:'Chicken Breast',u:'150g',c:250,p:45,cb:0,f:6},
+      {id:'rice',n:'White Rice',u:'1 cup',c:205,p:4,cb:44,f:0},
+      {id:'roti',n:'Roti',u:'1 pc',c:70,p:3,cb:15,f:0},
+      {id:'dal',n:'Dal',u:'1 bowl',c:260,p:12,cb:30,f:10},
+      {id:'paneer',n:'Paneer',u:'100g',c:265,p:18,cb:1,f:20}
+    ];
 
-    const Storage = {
-      KEY: "mission72_v1",
-      load() {
-        try {
-          const raw = localStorage.getItem(this.KEY);
-          if (!raw) return null;
-          return JSON.parse(raw);
-        } catch { return null; }
+    /* ---------- Core App State ---------- */
+    var App = {
+      state: {
+        settings: { c:1650, pro:130, carb:170, fat:55, url:'', key:'', deviceId:'' },
+        meal: 'Breakfast',
+        custom: [],
+        days: {},           // { "YYYY-MM-DD": {logs:[], burn:0, water:0} }
+        weightHistory: {}   // { "YYYY-MM-DD": 78.4 }
       },
-      save(data) { localStorage.setItem(this.KEY, JSON.stringify(data)); },
-      wipe() { localStorage.removeItem(this.KEY); }
-    };
-
-    const Utils = {
-      todayKey() { return new Date().toISOString().split("T")[0]; },
-      clamp(n, min, max) { return Math.max(min, Math.min(max, n)); },
-      round1(n) { return Math.round(n * 10) / 10; },
-      round0(n) { return Math.round(n); },
-      normalize(s) {
-        return String(s || "")
-          .toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9\s()/-]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-      },
-      scoreMatch(query, name, keywords=[]) {
-        const q = this.normalize(query);
-        const n = this.normalize(name);
-        if (!q) return 0;
-        if (n.startsWith(q)) return 100;
-        if (n.includes(q)) return 70;
-        const key = (keywords || []).map(k => this.normalize(k)).join(" ");
-        if (key.includes(q)) return 55;
-        const qt = new Set(q.split(" "));
-        const nt = new Set(n.split(" "));
-        let overlap = 0;
-        qt.forEach(t => { if (nt.has(t)) overlap++; });
-        return overlap ? 35 + overlap * 5 : 0;
-      }
-    };
-
-    // --- Food database ---
-    const FoodDB = (() => {
-      const base = [
-        { id:"apple", name:"Apple (1 medium)", cat:"Fruit", unit:"1 medium", kcal:95, pro:0.5, carb:25, fat:0.3, fiber:4.4, sugar:19, sodium:2, keywords:["fruit"] },
-        { id:"banana", name:"Banana (1 medium)", cat:"Fruit", unit:"1 medium", kcal:105, pro:1.3, carb:27, fat:0.4, fiber:3.1, sugar:14, sodium:1, keywords:["fruit"] },
-        { id:"orange", name:"Orange (1 medium)", cat:"Fruit", unit:"1 medium", kcal:62, pro:1.2, carb:15.4, fat:0.2, fiber:3.1, sugar:12, sodium:0, keywords:["fruit"] },
-
-        { id:"cucumber", name:"Cucumber (1 cup)", cat:"Veg", unit:"1 cup", kcal:16, pro:0.7, carb:3.8, fat:0.1, fiber:0.5, sugar:1.7, sodium:2, keywords:["veg"] },
-
-        { id:"white_rice", name:"White Rice (1 cup cooked)", cat:"Staple", unit:"1 cup cooked", kcal:205, pro:4.3, carb:44.5, fat:0.4, fiber:0.6, sugar:0.1, sodium:2, keywords:["rice"] },
-        { id:"chapati", name:"Chapati / Roti (1)", cat:"Indian", unit:"1 roti", kcal:70, pro:3, carb:15, fat:0.5, fiber:2, sugar:0.4, sodium:60, keywords:["roti","phulka"] },
-
-        { id:"egg", name:"Boiled Egg (1 large)", cat:"Protein", unit:"1 egg", kcal:78, pro:6, carb:0.6, fat:5, fiber:0, sugar:0.6, sodium:62, keywords:["egg"] },
-        { id:"chicken_breast", name:"Chicken Breast (150g)", cat:"Protein", unit:"150g", kcal:250, pro:45, carb:0, fat:6, fiber:0, sugar:0, sodium:120, keywords:["chicken"] },
-        { id:"greek_yogurt", name:"Greek Yogurt (1 cup)", cat:"Protein", unit:"1 cup", kcal:130, pro:12, carb:8, fat:0, fiber:0, sugar:6, sodium:65, keywords:["yogurt","curd"] },
-
-        { id:"almonds", name:"Almonds (28g)", cat:"Snack", unit:"28g", kcal:164, pro:6, carb:6, fat:14, fiber:3.5, sugar:1.2, sodium:0, keywords:["nuts"] },
-
-        { id:"sambar", name:"Sambar (1 bowl)", cat:"Indian", unit:"1 bowl", kcal:130, pro:6, carb:18, fat:4, fiber:5, sugar:3, sodium:350, keywords:["south indian","lentil stew"] },
-        { id:"idli", name:"Idli (1)", cat:"Indian", unit:"1 idli", kcal:39, pro:1, carb:8, fat:0.2, fiber:0.6, sugar:0.2, sodium:70, keywords:["south indian"] },
-        { id:"dosa_plain", name:"Dosa (plain, 1)", cat:"Indian", unit:"1 dosa", kcal:133, pro:3, carb:23, fat:3, fiber:1.5, sugar:0.5, sodium:180, keywords:["south indian"] },
-        { id:"upma", name:"Upma (1 cup)", cat:"Indian", unit:"1 cup", kcal:250, pro:6, carb:40, fat:8, fiber:3, sugar:2, sodium:420, keywords:["south indian","rava upma"] },
-      ];
-
-      return {
-        base,
-        getAll() {
-          const custom = (App.state.customFoods || []);
-          const map = new Map();
-          [...custom, ...base].forEach(f => map.set(f.id, f));
-          return Array.from(map.values());
+      init: function(){
+        var s = localStorage.getItem('m72_elite_secure_v1');
+        if (s) {
+          try { this.state = JSON.parse(s); } catch(e){}
         }
-      };
-    })();
+        // Ensure deviceId
+        if (!this.state.settings.deviceId) {
+          this.state.settings.deviceId = 'dev_' + Math.random().toString(16).slice(2) + '_' + Date.now();
+        }
 
-    const Templates = {
-      defaults: [
-        { name: "South Indian Breakfast", items: [
-          { foodName: "Idli (1)", qty: 3 },
-          { foodName: "Sambar (1 bowl)", qty: 1 },
-          { foodName: "Banana (1 medium)", qty: 1 }
-        ]},
-        { name: "Lean Lunch", items: [
-          { foodName: "Chicken Breast (150g)", qty: 1 },
-          { foodName: "White Rice (1 cup cooked)", qty: 1 },
-          { foodName: "Cucumber (1 cup)", qty: 1 }
-        ]},
-        { name: "High-Protein Snack", items: [
-          { foodName: "Greek Yogurt (1 cup)", qty: 1 },
-          { foodName: "Almonds (28g)", qty: 1 }
-        ]}
-      ]
-    };
+        // hydrate settings UI
+        document.getElementById('s-url').value = this.state.settings.url || '';
+        document.getElementById('s-key').value = this.state.settings.key || '';
+        document.getElementById('s-device').value = this.state.settings.deviceId || '';
+        document.getElementById('s-cal').value = this.state.settings.c || 1650;
+        document.getElementById('s-pro').value = this.state.settings.pro || 130;
+        document.getElementById('s-carb').value = this.state.settings.carb || 170;
+        document.getElementById('s-fat').value = this.state.settings.fat || 55;
 
-    const App = {
-      state: null,
-
-      init() {
-        const saved = Storage.load();
-        this.state = saved ? this.migrate(saved) : this.defaultState();
-
-        const today = Utils.todayKey();
-        this.state.days[today] ||= { logs: [] };
-
-        this.setMeal(this.state.ui.currentMeal || "Lunch");
-        UI.nav(this.state.ui.view || "today", true);
-        UI.refreshSettingsSheet();
-        TemplatesUI.render();
-
-        Renderer.renderAll();
-        Swipe.init();
+        this.setMeal(this.state.meal || 'Breakfast');
+        Trends.setMode(Trends.mode); // render default
+        Render.all();
       },
-
-      defaultState() {
-        return {
-          v: 1,
-          settings: {
-            goalKcal: 1650,
-            targetPro: 130,
-            targetCarb: 170,
-            targetFat: 55,
-            mode: "Cut"
-          },
-          ui: {
-            view: "today",
-            currentMeal: "Lunch",
-            foodFilter: "all",
-            recents: []
-          },
-          favorites: [],
-          customFoods: [],
-          days: {}
-        };
+      save: function(){
+        localStorage.setItem('m72_elite_secure_v1', JSON.stringify(this.state));
       },
-
-      migrate(data) {
-        if (!data || typeof data !== "object") return this.defaultState();
-        if (!data.v) data.v = 1;
-        data.settings ||= this.defaultState().settings;
-        data.ui ||= this.defaultState().ui;
-        data.favorites ||= [];
-        data.customFoods ||= [];
-        data.days ||= {};
-        data.ui.recents ||= [];
-        return data;
-      },
-
-      save() { Storage.save(this.state); },
-
-      setMeal(meal) {
-        this.state.ui.currentMeal = meal;
-        this.save();
-        Renderer.renderTabs();
-        Renderer.renderMeal();
-      },
-
-      todayLogs() {
-        const today = Utils.todayKey();
-        this.state.days[today] ||= { logs: [] };
-        return this.state.days[today].logs;
-      },
-
-      addLog(entry) {
-        const logs = this.todayLogs();
-        logs.unshift(entry);
-        this.save();
-        Renderer.renderAll();
-      },
-
-      updateLog(id, patch) {
-        const logs = this.todayLogs();
-        const idx = logs.findIndex(x => x.id === id);
-        if (idx === -1) return;
-        logs[idx] = { ...logs[idx], ...patch };
-        this.save();
-        Renderer.renderAll();
-      },
-
-      deleteLog(id) {
-        const logs = this.todayLogs();
-        const idx = logs.findIndex(x => x.id === id);
-        if (idx === -1) return;
-        logs.splice(idx, 1);
-        this.save();
-        Renderer.renderAll();
-      }
-    };
-
-    const Renderer = {
-      renderAll() {
-        this.renderHeader();
-        this.renderTabs();
-        this.renderMeal();
-        this.renderFavoritesView();
-        if (App.state.ui.view === "insights") Insights.render();
-      },
-
-      totalsForToday() {
-        const logs = App.todayLogs();
-        return logs.reduce((t, l) => {
-          t.kcal += l.kcal; t.pro += l.pro; t.carb += l.carb; t.fat += l.fat;
-          t.fiber += (l.fiber || 0); t.sugar += (l.sugar || 0);
-          return t;
-        }, {kcal:0, pro:0, carb:0, fat:0, fiber:0, sugar:0});
-      },
-
-      renderHeader() {
-        const t = this.totalsForToday();
-        const goal = App.state.settings.goalKcal;
-
-        const remaining = Math.max(0, goal - t.kcal);
-        document.getElementById("kcalRemaining").innerText = remaining;
-        document.getElementById("kcalGoalText").innerText = goal;
-        document.getElementById("goalModeText").innerText = App.state.settings.mode;
-
-        document.getElementById("mPro").innerText = Utils.round0(t.pro);
-        document.getElementById("mCarb").innerText = Utils.round0(t.carb);
-        document.getElementById("mFat").innerText = Utils.round0(t.fat);
-
-        document.getElementById("tPro").innerText = App.state.settings.targetPro + "g";
-        document.getElementById("tCarb").innerText = App.state.settings.targetCarb + "g";
-        document.getElementById("tFat").innerText = App.state.settings.targetFat + "g";
-
-        const pct = Utils.clamp((t.kcal / goal) * 100, 0, 120);
-        document.getElementById("ringPct").innerText = Math.round(Math.min(pct, 100)) + "%";
-
-        const circumference = 2 * Math.PI * 44;
-        const dash = circumference * (Math.min(pct, 100) / 100);
-        const offset = circumference - dash;
-        const ring = document.getElementById("ring");
-        ring.style.strokeDasharray = circumference.toFixed(2);
-        ring.style.strokeDashoffset = offset.toFixed(2);
-
-        const chip = document.getElementById("statusChip");
-        const over = t.kcal > goal;
-        if (over) {
-          chip.textContent = "Over goal";
-          chip.style.background = "rgba(255,90,95,0.14)";
-          chip.style.borderColor = "rgba(255,90,95,0.35)";
-        } else {
-          const ratio = t.kcal / goal;
-          if (ratio >= 0.8 && ratio <= 1.05) {
-            chip.textContent = "On track";
-            chip.style.background = "rgba(52,211,153,0.14)";
-            chip.style.borderColor = "rgba(52,211,153,0.35)";
-          } else if (ratio < 0.8) {
-            chip.textContent = "Under goal";
-            chip.style.background = "rgba(107,212,255,0.12)";
-            chip.style.borderColor = "rgba(107,212,255,0.32)";
+      setMeal: function(m){
+        this.state.meal = m;
+        var meals = ['Breakfast','Lunch','Snack','Dinner'];
+        for (var i=0;i<meals.length;i++){
+          var id = meals[i];
+          var el = document.getElementById('btn-'+id);
+          if (!el) continue;
+          if (id === m) {
+            el.classList.add('text-white','bg-zinc-800','rounded-xl');
+            el.classList.remove('text-zinc-500');
           } else {
-            chip.textContent = "Near limit";
-            chip.style.background = "rgba(255,255,255,0.08)";
-            chip.style.borderColor = "rgba(255,255,255,0.18)";
+            el.classList.remove('text-white','bg-zinc-800','rounded-xl');
+            el.classList.add('text-zinc-500');
           }
         }
-
-        const streak = Insights.calculateStreak();
-        document.getElementById("streakChip").textContent = `🔥 ${streak}-day streak`;
+        Render.all();
       },
-
-      renderTabs() {
-        const cur = App.state.ui.currentMeal;
-        ["Breakfast","Lunch","Snack","Dinner"].forEach(m => {
-          const btn = document.getElementById("tab-" + m);
-          const active = m === cur;
-          btn.classList.toggle("muted", !active);
-          btn.style.background = active ? "rgba(255,255,255,0.08)" : "transparent";
-          btn.style.borderColor = active ? "rgba(139,211,199,0.35)" : "rgba(255,255,255,0.10)";
-        });
-        document.getElementById("mealTitle").innerText = cur;
-
-        const label = document.getElementById("sheetMealName");
-        if (label) label.innerText = cur;
-
-        TemplatesUI.render();
+      todayKey: function(){
+        return new Date().toISOString().split('T')[0];
       },
-
-      renderMeal() {
-        const meal = App.state.ui.currentMeal;
-        const list = document.getElementById("mealList");
-        const logs = App.todayLogs().filter(l => l.meal === meal);
-
-        const mealKcal = logs.reduce((s,l)=>s+l.kcal,0);
-        document.getElementById("mealTotal").innerText = `${Utils.round0(mealKcal)} kcal`;
-
-        if (!logs.length) {
-          list.innerHTML = `
-            <div class="glass-soft rounded-4xl p-6 text-center fade-in">
-              <div class="text-sm font-black">Nothing logged yet</div>
-              <div class="text-xs muted mt-1">Search above and add foods. Tap items here to edit.</div>
-            </div>`;
-          return;
-        }
-
-        list.innerHTML = logs.map(l => `
-          <button class="btn w-full glass-soft rounded-4xl p-4 text-left fade-in"
-            onclick="Sheet.openEdit('${l.id}')">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="font-black text-base truncate">
-                  ${escapeHtml(l.name)}
-                  <span class="text-xs muted font-semibold">× ${Number(l.qty).toFixed(2).replace(/\.00$/,'')}</span>
-                </div>
-                <div class="text-[11px] muted mt-1">
-                  ${l.unit ? escapeHtml(l.unit) : "serving"}
-                  · P ${Utils.round0(l.pro)} · C ${Utils.round0(l.carb)} · F ${Utils.round0(l.fat)}
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-lg font-black" style="color: var(--accent)">${Utils.round0(l.kcal)}</div>
-                <div class="text-[10px] uppercase tracking-widest muted2 font-bold">kcal</div>
-              </div>
-            </div>
-
-            <div class="mt-3 flex gap-2">
-              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold muted">${escapeHtml(l.meal)}</span>
-              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold muted">Tap to edit</span>
-              <span class="pill rounded-full px-3 py-1 text-[11px] font-bold" style="background: rgba(255,90,95,0.10); border-color: rgba(255,90,95,0.22);"
-                onclick="event.stopPropagation(); App.deleteLog('${l.id}')">Delete</span>
-            </div>
-          </button>
-        `).join("");
+      getDay: function(dateKey){
+        if (!this.state.days[dateKey]) this.state.days[dateKey] = { logs:[], burn:0, water:0 };
+        return this.state.days[dateKey];
       },
-
-      renderFavoritesView() {
-        if (App.state.ui.view !== "library") return;
-        Foods.renderFavorites();
+      getToday: function(){
+        return this.getDay(this.todayKey());
       }
     };
 
-    const UI = {
-      nav(view, skipSave=false) {
-        const views = {
-          today: document.getElementById("todayView"),
-          insights: document.getElementById("insightsView"),
-          library: document.getElementById("libraryView"),
-        };
+    /* ---------- UI ---------- */
+    var UI = {
+      nav: function(idx, btn, viewId){
+        var navs = document.querySelectorAll('.nav-btn');
+        for (var i=0;i<navs.length;i++) navs[i].classList.remove('active');
+        btn.classList.add('active');
 
-        const order = ["today","insights","library"];
-        const prevView = App.state.ui.view || "today";
-        const prevIdx = order.indexOf(prevView);
-        const nextIdx = order.indexOf(view);
-        const dirClass = nextIdx > prevIdx ? "enter-right" : "enter-left";
+        var views = document.querySelectorAll('.view');
+        for (var j=0;j<views.length;j++) views[j].classList.remove('active-view');
+        document.getElementById(viewId).classList.add('active-view');
 
-        UI.closeSheets();
-
-        Object.values(views).forEach(v => {
-          v.classList.remove("active", "enter-left", "enter-right");
-          v.setAttribute("aria-hidden", "true");
-        });
-
-        const nextEl = views[view];
-        nextEl.classList.add(dirClass);
-        nextEl.setAttribute("aria-hidden", "false");
-
-        requestAnimationFrame(() => nextEl.classList.add("active"));
-
-        const navToday = document.getElementById("nav-today");
-        const navInsights = document.getElementById("nav-insights");
-        const navLibrary = document.getElementById("nav-library");
-
-        function setActive(btn, active){
-          btn.classList.toggle("muted", !active);
-          btn.style.background = active ? "rgba(255,255,255,0.08)" : "transparent";
-          btn.style.border = active ? "1px solid rgba(139,211,199,0.30)" : "1px solid transparent";
-        }
-
-        setActive(navToday, view==="today");
-        setActive(navInsights, view==="insights");
-        setActive(navLibrary, view==="library");
-
-        App.state.ui.view = view;
-        if (!skipSave) App.save();
-
-        if (view === "insights") Insights.render();
-        if (view === "library") Foods.renderFavorites();
-
-        try { nextEl.scrollTo({ top: 0, behavior: "smooth" }); } catch { nextEl.scrollTop = 0; }
+        if (idx === 1) Trends.renderAll();
+        if (idx === 2) History.renderCalendar();
       },
-
-      open(sheetId) {
-        document.getElementById("sheetBackdrop").classList.remove("hidden");
-        document.getElementById(sheetId).classList.remove("translate-y-full");
-        if (sheetId === "settingsSheet") this.refreshSettingsSheet();
-        if (sheetId === "templatesSheet") TemplatesUI.render();
+      open: function(id){
+        document.getElementById('backdrop').style.display='block';
+        document.getElementById('sheet-'+id).classList.add('open');
       },
-
-      closeSheets() {
-        document.getElementById("sheetBackdrop").classList.add("hidden");
-        ["foodSheet","customSheet","settingsSheet","templatesSheet"].forEach(id => {
-          document.getElementById(id).classList.add("translate-y-full");
-        });
-      },
-
-      refreshSettingsSheet() {
-        const s = App.state.settings;
-        document.getElementById("sGoal").value = s.goalKcal;
-        document.getElementById("sPro").value = s.targetPro;
-        document.getElementById("sCarb").value = s.targetCarb;
-        document.getElementById("sFat").value = s.targetFat;
-        document.getElementById("sMode").value = s.mode;
+      closeAll: function(){
+        document.getElementById('backdrop').style.display='none';
+        var sheets = document.querySelectorAll('.sheet');
+        for (var i=0;i<sheets.length;i++) sheets[i].classList.remove('open');
       }
     };
 
-    const Foods = {
-      filter: "all",
-      setFilter(f) {
-        App.state.ui.foodFilter = f;
-        App.save();
-        this.filter = f;
+    /* ---------- Render ---------- */
+    var Render = {
+      all: function(){
+        var day = App.getToday();
+        var eaten = 0;
+        for (var i=0;i<day.logs.length;i++) eaten += (Number(day.logs[i].c) || 0);
+        var net = eaten - (Number(day.burn) || 0);
+        var goal = Number(App.state.settings.c) || 1650;
 
-        const chips = ["all","fav","Fruit","Protein","Indian","Staple","Snack"];
-        chips.forEach(c => {
-          const el = document.getElementById("chip-" + c.toLowerCase());
-          if (!el) return;
-          el.classList.toggle("active", c === f);
-        });
+        document.getElementById('val-rem').innerText = Math.round(Math.max(0, goal - net));
+        document.getElementById('val-net').innerText = Math.round(net);
+        document.getElementById('val-burned').innerText = Math.round(day.burn || 0);
+        document.getElementById('val-water').innerText = ((day.water || 0) * 0.25).toFixed(1);
 
-        this.searchLive();
-      },
+        var pct = Math.min((net/goal)*100, 100);
+        if (!isFinite(pct)) pct = 0;
+        document.getElementById('val-pct').innerText = Math.round(pct) + '%';
+        document.getElementById('ring-progress').style.strokeDashoffset = 214 - (214 * pct / 100);
 
-      searchLive() {
-        this.filter = App.state.ui.foodFilter || "all";
-        const q = document.getElementById("searchInput").value.trim();
-        const resultsEl = document.getElementById("searchResults");
-
-        if (!q && this.filter === "all") {
-          resultsEl.classList.add("hidden");
-          resultsEl.innerHTML = "";
-          return;
+        // macros
+        var m = {p:0,cb:0,f:0};
+        for (var k=0;k<day.logs.length;k++){
+          m.p += Number(day.logs[k].p)||0;
+          m.cb += Number(day.logs[k].cb)||0;
+          m.f += Number(day.logs[k].f)||0;
         }
 
-        const all = FoodDB.getAll();
-        const favs = new Set(App.state.favorites);
-        let pool = all;
+        var tPro = Number(App.state.settings.pro)||130;
+        var tCarb = Number(App.state.settings.carb)||170;
+        var tFat = Number(App.state.settings.fat)||55;
 
-        if (this.filter === "fav") pool = all.filter(f => favs.has(f.id));
-        else if (this.filter !== "all") pool = all.filter(f => f.cat === this.filter);
+        setMacro_('pro', m.p, tPro);
+        setMacro_('carb', m.cb, tCarb);
+        setMacro_('fat', m.f, tFat);
 
-        let matches = pool
-          .map(f => ({ f, score: Utils.scoreMatch(q || " ", f.name, f.keywords) }))
-          .filter(x => q ? x.score > 0 : true);
+        // header weight
+        var whKeys = Object.keys(App.state.weightHistory).sort();
+        var w = whKeys.length ? App.state.weightHistory[whKeys[whKeys.length-1]] : "--";
+        document.getElementById('header-weight').innerText = w;
 
-        if (!q) {
-          matches = matches
-            .map(x => ({...x, score: favs.has(x.f.id) ? 99 : 10}))
-            .sort((a,b)=>b.score-a.score);
-        } else {
-          matches.sort((a,b)=>b.score-a.score);
-        }
-
-        const top = matches.slice(0, 18).map(x => x.f);
-
-        resultsEl.classList.remove("hidden");
-        resultsEl.innerHTML = top.map(f => this.foodRow(f)).join("");
-
-        if (!top.length) {
-          resultsEl.innerHTML = `<div class="glass-soft rounded-4xl p-5 text-center">
-            <div class="font-black">No match</div>
-            <div class="text-xs muted mt-1">Try a different keyword or create a custom item.</div>
-          </div>`;
-        }
+        this.list();
+        Trends.predictETA();
       },
-
-      foodRow(f) {
-        const isFav = App.state.favorites.includes(f.id);
-        return `
-          <div class="glass-soft rounded-4xl p-4 flex items-center justify-between gap-3">
-            <button class="btn flex-1 text-left" onclick="Sheet.openAdd('${f.id}')">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="font-black truncate">${escapeHtml(f.name)}</div>
-                  <div class="text-[11px] muted mt-1">
-                    ${escapeHtml(f.cat)} · ${escapeHtml(f.unit)} ·
-                    P ${Utils.round1(f.pro)} · C ${Utils.round1(f.carb)} · F ${Utils.round1(f.fat)}
-                  </div>
-                </div>
-                <div class="text-right shrink-0">
-                  <div class="text-lg font-black" style="color: var(--accent2)">${Utils.round0(f.kcal)}</div>
-                  <div class="text-[10px] uppercase tracking-widest muted2 font-bold">kcal</div>
-                </div>
-              </div>
-            </button>
-
-            <button class="btn w-12 h-12 rounded-3xl glass-soft flex items-center justify-center"
-              onclick="Foods.toggleFavorite('${f.id}')"
-              title="Save">
-              <span class="text-xl">${isFav ? "★" : "☆"}</span>
-            </button>
-          </div>
-        `;
-      },
-
-      toggleFavorite(id) {
-        const favs = App.state.favorites;
-        const idx = favs.indexOf(id);
-        if (idx >= 0) favs.splice(idx, 1);
-        else favs.push(id);
-        App.save();
-        this.searchLive();
-        this.renderFavorites();
-      },
-
-      renderFavorites() {
-        const favs = new Set(App.state.favorites);
-        const q = Utils.normalize(document.getElementById("favSearch")?.value || "");
-        const list = document.getElementById("favList");
-        const all = FoodDB.getAll().filter(f => favs.has(f.id));
-
-        const filtered = q
-          ? all.filter(f => Utils.normalize(f.name).includes(q) || (f.keywords||[]).some(k => Utils.normalize(k).includes(q)))
-          : all;
-
-        if (!filtered.length) {
-          list.innerHTML = `
-            <div class="glass rounded-4xl p-6 text-center">
-              <div class="font-black">No saved foods</div>
-              <div class="text-xs muted mt-1">Go to Today → search → tap ★ to save items here.</div>
-            </div>`;
-          return;
+      list: function(){
+        var items = App.getToday().logs.filter(function(l){ return l.meal === App.state.meal; });
+        var out = '';
+        for (var i=0;i<items.length;i++){
+          var it = items[i];
+          out += ''
+            + '<div class="glass-card p-4 flex justify-between items-center">'
+            +   '<div>'
+            +     '<div class="text-white font-black text-sm">' + esc_(it.n) + ' <span class="text-zinc-500 font-semibold">× ' + esc_(String(it.qty||1)) + '</span></div>'
+            +     '<div class="text-[10px] text-zinc-500 mt-1 font-bold">P' + Math.round(it.p||0) + ' C' + Math.round(it.cb||0) + ' F' + Math.round(it.f||0) + '</div>'
+            +   '</div>'
+            +   '<span class="text-blue-400 font-black">' + Math.round(it.c||0) + '</span>'
+            + '</div>';
         }
-
-        list.innerHTML = filtered
-          .sort((a,b)=>a.name.localeCompare(b.name))
-          .map(f => `
-            <button class="btn w-full glass rounded-4xl p-4 text-left"
-              onclick="(App.setMeal(App.state.ui.currentMeal), Sheet.openAdd('${f.id}'))">
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="font-black truncate">${escapeHtml(f.name)}</div>
-                  <div class="text-[11px] muted mt-1">${escapeHtml(f.cat)} · ${escapeHtml(f.unit)}</div>
-                </div>
-                <div class="text-right">
-                  <div class="font-black" style="color: var(--accent)">${Utils.round0(f.kcal)} kcal</div>
-                  <div class="text-[11px] muted2">Tap to add</div>
-                </div>
-              </div>
-            </button>
-          `).join("");
+        if (!out) out = '<div class="text-center py-6 text-zinc-700 text-[10px] border border-dashed border-zinc-800 rounded-2xl font-black">Empty</div>';
+        document.getElementById('log-list').innerHTML = out;
       }
     };
 
-    const Sheet = {
-      mode: "add",
-      qty: 1.0,
-      food: null,
-      editingLogId: null,
+    function setMacro_(key, curr, tgt){
+      var pct = tgt ? Math.min((curr/tgt)*100, 100) : 0;
+      if (!isFinite(pct)) pct = 0;
+      document.getElementById('curr-'+key).innerText = Math.round(curr);
+      document.getElementById('tgt-'+key).innerText = Math.round(tgt);
+      document.getElementById('pct-'+key).innerText = Math.round(pct);
+      document.getElementById('bar-'+key).style.width = pct + '%';
+    }
 
-      openAdd(foodId) {
-        const f = FoodDB.getAll().find(x => x.id === foodId);
-        if (!f) return;
-
-        this.mode = "add";
-        this.food = f;
-        this.qty = 1.0;
-        this.editingLogId = null;
-
-        document.getElementById("sheetMode").innerText = "Add";
-        document.getElementById("sheetMealName").innerText = App.state.ui.currentMeal;
-        document.getElementById("sheetName").innerText = f.name;
-        document.getElementById("sheetMeta").innerText = `${f.kcal} kcal · P ${f.pro} · C ${f.carb} · F ${f.fat} per ${f.unit}`;
-        document.getElementById("sheetUnit").innerText = f.unit;
-
-        this.refreshFavButton();
-        this.recalc();
-
-        UI.open("foodSheet");
-      },
-
-      openEdit(logId) {
-        const logs = App.todayLogs();
-        const log = logs.find(x => x.id === logId);
-        if (!log) return;
-
-        this.mode = "edit";
-        this.editingLogId = logId;
-        this.qty = Number(log.qty) || 1;
-
-        this.food = {
-          id: log.foodId || ("log_"+logId),
-          name: log.name,
-          cat: log.cat || "Custom",
-          unit: log.unit || "serving",
-          kcal: log.kcal / this.qty,
-          pro: log.pro / this.qty,
-          carb: log.carb / this.qty,
-          fat: log.fat / this.qty,
-          fiber: (log.fiber||0) / this.qty,
-          sugar: (log.sugar||0) / this.qty,
-          sodium: (log.sodium||0) / this.qty
-        };
-
-        document.getElementById("sheetMode").innerText = "Edit";
-        document.getElementById("sheetMealName").innerText = log.meal;
-        document.getElementById("sheetName").innerText = log.name;
-        document.getElementById("sheetMeta").innerText = `Editing logged item · per ${log.unit || "serving"}`;
-        document.getElementById("sheetUnit").innerText = log.unit || "serving";
-
-        this.refreshFavButton();
-        this.recalc();
-
-        UI.open("foodSheet");
-      },
-
-      setQty(v) {
-        this.qty = Utils.round1(Number(v) || 1);
-        this.qty = Utils.clamp(this.qty, 0.25, 50);
-        this.recalc();
-      },
-
-      adjust(delta) {
-        this.qty = Utils.round1((Number(this.qty) || 1) + delta);
-        this.qty = Utils.clamp(this.qty, 0.25, 50);
-        this.recalc();
-      },
-
-      recalc() {
-        document.getElementById("sheetQty").innerText = this.qty.toFixed(2).replace(/\.00$/,'').replace(/0$/,'');
-        const f = this.food;
-        const q = this.qty;
-
-        const kcal = Utils.round0((f.kcal || 0) * q);
-        const pro  = Utils.round0((f.pro  || 0) * q);
-        const carb = Utils.round0((f.carb || 0) * q);
-        const fat  = Utils.round0((f.fat  || 0) * q);
-        const fiber= Utils.round0((f.fiber|| 0) * q);
-        const sugar= Utils.round0((f.sugar|| 0) * q);
-
-        document.getElementById("sheetCal").innerText = kcal;
-        document.getElementById("sheetMacros").innerText = `P ${pro} · C ${carb} · F ${fat}`;
-        document.getElementById("sheetMore").innerText = `Fiber ${fiber}g · Sugar ${sugar}g`;
-      },
-
-      commit() {
-        const f = this.food;
-        const q = this.qty;
-
-        const entry = {
-          id: crypto.randomUUID(),
-          meal: App.state.ui.currentMeal,
-          foodId: f.id,
-          name: f.name,
-          cat: f.cat,
-          unit: f.unit,
-          qty: q,
-          kcal: Utils.round0((f.kcal || 0) * q),
-          pro: Utils.round0((f.pro || 0) * q),
-          carb: Utils.round0((f.carb || 0) * q),
-          fat: Utils.round0((f.fat || 0) * q),
-          fiber: Utils.round0((f.fiber || 0) * q),
-          sugar: Utils.round0((f.sugar || 0) * q),
-          sodium: Utils.round0((f.sodium || 0) * q),
-          ts: Date.now()
-        };
-
-        if (this.mode === "edit" && this.editingLogId) {
-          const patch = { ...entry, id: this.editingLogId, meal: App.todayLogs().find(x=>x.id===this.editingLogId)?.meal || entry.meal };
-          App.updateLog(this.editingLogId, patch);
-        } else {
-          App.addLog(entry);
+    /* ---------- Foods ---------- */
+    var Foods = {
+      search: function(){
+        var q = (document.getElementById('search-input').value||'').toLowerCase();
+        var res = document.getElementById('search-results');
+        if (!q){ res.classList.add('hidden'); return; }
+        var pool = App.state.custom.concat(DB);
+        var hits = pool.filter(function(f){ return (f.n||'').toLowerCase().indexOf(q) !== -1; }).slice(0,5);
+        res.classList.remove('hidden');
+        var html = '';
+        for (var i=0;i<hits.length;i++){
+          var f = hits[i];
+          html += '<div onclick="Sheet.openAdd(\'' + escAttr_(f.id) + '\')" class="bg-zinc-900 p-3 rounded-xl flex justify-between items-center border border-zinc-800 btn-press">'
+               +    '<div class="text-white text-sm font-black">' + esc_(f.n) + '</div>'
+               +    '<div class="text-zinc-500 text-xs font-black">' + Math.round(f.c) + ' kcal</div>'
+               + '</div>';
         }
-
-        const rec = (App.state.ui.recents || []).filter(x => x !== f.id);
-        rec.unshift(f.id);
-        App.state.ui.recents = rec.slice(0, 12);
-        App.save();
-
-        UI.closeSheets();
-        document.getElementById("searchInput").value = "";
-        document.getElementById("searchResults").classList.add("hidden");
-      },
-
-      toggleFavorite() {
-        if (!this.food?.id) return;
-        Foods.toggleFavorite(this.food.id);
-        this.refreshFavButton();
-      },
-
-      refreshFavButton() {
-        const isFav = App.state.favorites.includes(this.food?.id);
-        document.getElementById("favBtnText").textContent = isFav ? "★ Saved" : "★ Save";
+        res.innerHTML = html;
       }
     };
 
-    const Actions = {
-      quickAdd(foodName) {
-        const all = FoodDB.getAll();
-        const f = all.find(x => x.name === foodName);
-        if (!f) return alert("Food not found in DB.");
-        Sheet.openAdd(f.id);
+    /* ---------- Sheet: Food Add ---------- */
+    var Sheet = {
+      curr: null, qty: 1,
+      openAdd: function(fid){
+        var pool = App.state.custom.concat(DB);
+        this.curr = pool.find(function(x){ return x.id === fid; }) || null;
+        if (!this.curr) return;
+        this.qty = 1;
+        this.render();
+        UI.open('food');
       },
-
-      quickAddRecent() {
-        const rec = (App.state.ui.recents || [])[0];
-        if (!rec) { UI.open("templatesSheet"); return; }
-        Sheet.openAdd(rec);
+      render: function(){
+        document.getElementById('sheet-name').innerText = this.curr.n;
+        document.getElementById('sheet-qty').innerText = this.qty.toFixed(1);
+        document.getElementById('sheet-total').innerText = Math.round(this.curr.c * this.qty) + ' kcal';
       },
-
-      openTemplates() { UI.open("templatesSheet"); },
-
-      resetDay() {
-        if (!confirm("Reset today’s logs?")) return;
-        const today = Utils.todayKey();
-        App.state.days[today] = { logs: [] };
-        App.save();
-        Renderer.renderAll();
+      adj: function(d){
+        this.qty = Math.max(0.5, this.qty + d);
+        this.render();
       },
-
-      resetOnlyToday() {
-        if (!confirm("Clear only today?")) return;
-        this.resetDay();
-        UI.closeSheets();
-      },
-
-      setGoalPreset(v) { document.getElementById("sGoal").value = v; },
-
-      saveSettings() {
-        const goal = Number(document.getElementById("sGoal").value) || 1650;
-        const pro  = Number(document.getElementById("sPro").value) || 130;
-        const carb = Number(document.getElementById("sCarb").value) || 170;
-        const fat  = Number(document.getElementById("sFat").value) || 55;
-        const mode = document.getElementById("sMode").value || "Cut";
-
-        App.state.settings.goalKcal = Utils.clamp(Math.round(goal), 800, 5000);
-        App.state.settings.targetPro = Utils.clamp(Math.round(pro), 0, 400);
-        App.state.settings.targetCarb = Utils.clamp(Math.round(carb), 0, 600);
-        App.state.settings.targetFat = Utils.clamp(Math.round(fat), 0, 200);
-        App.state.settings.mode = mode;
-
-        App.save();
-        Renderer.renderAll();
-        UI.closeSheets();
-      },
-
-      prefillExample() {
-        document.getElementById("cName").value = "Homemade Oats Bowl";
-        document.getElementById("cUnit").value = "1 bowl";
-        document.getElementById("cKcal").value = 380;
-        document.getElementById("cPro").value = 22;
-        document.getElementById("cCarb").value = 45;
-        document.getElementById("cFat").value = 12;
-        document.getElementById("cFiber").value = 8;
-        document.getElementById("cSugar").value = 10;
-      },
-
-      saveCustomFood() {
-        const name = (document.getElementById("cName").value || "").trim();
-        const unit = (document.getElementById("cUnit").value || "1 serving").trim();
-        const kcal = Number(document.getElementById("cKcal").value);
-        const pro  = Number(document.getElementById("cPro").value) || 0;
-        const carb = Number(document.getElementById("cCarb").value) || 0;
-        const fat  = Number(document.getElementById("cFat").value) || 0;
-        const fiber= Number(document.getElementById("cFiber").value) || 0;
-        const sugar= Number(document.getElementById("cSugar").value) || 0;
-
-        if (!name || !kcal || kcal <= 0) { alert("Please enter at least Name + Calories."); return; }
-
-        const id = "custom_" + crypto.randomUUID().slice(0, 8);
-        const food = {
-          id,
-          name: `${name} (${unit})`,
-          cat: "Custom",
-          unit,
-          kcal: Utils.round1(kcal),
-          pro: Utils.round1(pro),
-          carb: Utils.round1(carb),
-          fat: Utils.round1(fat),
-          fiber: Utils.round1(fiber),
-          sugar: Utils.round1(sugar),
-          sodium: 0,
-          keywords: ["custom", name]
+      save: function(){
+        var base = this.curr;
+        var log = {
+          id: Date.now(),
+          foodId: base.id,
+          n: base.n,
+          u: base.u,
+          qty: this.qty,
+          c: base.c * this.qty,
+          p: (base.p||0) * this.qty,
+          cb: (base.cb||0) * this.qty,
+          f: (base.f||0) * this.qty,
+          meal: App.state.meal,
+          ts: new Date().toISOString()
         };
-
-        App.state.customFoods.unshift(food);
+        App.getToday().logs.unshift(log);
         App.save();
+        Render.all();
+        UI.closeAll();
+      }
+    };
 
-        UI.closeSheets();
-        Sheet.openAdd(id);
+    /* ---------- Data actions ---------- */
+    var Data = {
+      addWater: function(){
+        App.getToday().water = (App.getToday().water||0) + 1;
+        App.save(); Render.all();
       },
-
-      exportData() {
-        const blob = { exportedAt: new Date().toISOString(), data: App.state };
-        const text = JSON.stringify(blob, null, 2);
-
-        navigator.clipboard?.writeText(text).then(() => {
-          alert("Export copied to clipboard ✅\nPaste into Notes/Drive.");
-        }).catch(() => {
-          prompt("Copy this JSON:", text);
-        });
+      addExercise: function(name, kcal){
+        App.getToday().burn = (App.getToday().burn||0) + (Number(kcal)||0);
+        App.save(); Render.all(); UI.closeAll();
       },
-
-      importData() {
-        const raw = prompt("Paste exported JSON here:");
-        if (!raw) return;
-        try {
-          const parsed = JSON.parse(raw);
-          const data = parsed.data || parsed;
-          App.state = App.migrate(data);
-          App.save();
-          Renderer.renderAll();
-          alert("Import successful ✅");
-        } catch (e) {
-          alert("Import failed. Invalid JSON.");
-        }
+      saveWeight: function(){
+        var v = parseFloat(document.getElementById('quick-weight').value);
+        if (!isFinite(v)) return;
+        App.state.weightHistory[App.todayKey()] = v;
+        App.save(); Render.all(); UI.closeAll();
       },
+      saveSettings: function(){
+        App.state.settings.url = (document.getElementById('s-url').value||'').trim();
+        App.state.settings.key = (document.getElementById('s-key').value||'').trim();
+        var dev = (document.getElementById('s-device').value||'').trim();
+        if (dev) App.state.settings.deviceId = dev;
+        if (!App.state.settings.deviceId) App.state.settings.deviceId = 'dev_' + Math.random().toString(16).slice(2) + '_' + Date.now();
 
-      clearAll() {
-        if (!confirm("Factory reset? This clears everything.")) return;
-        Storage.wipe();
+        var c = parseInt(document.getElementById('s-cal').value, 10);
+        var pro = parseInt(document.getElementById('s-pro').value, 10);
+        var carb = parseInt(document.getElementById('s-carb').value, 10);
+        var fat = parseInt(document.getElementById('s-fat').value, 10);
+
+        App.state.settings.c = isFinite(c) ? c : 1650;
+        App.state.settings.pro = isFinite(pro) ? pro : 130;
+        App.state.settings.carb = isFinite(carb) ? carb : 170;
+        App.state.settings.fat = isFinite(fat) ? fat : 55;
+
+        App.save(); Render.all(); UI.closeAll();
+      },
+      resetAll: function(){
+        localStorage.removeItem('m72_elite_secure_v1');
         location.reload();
       }
     };
 
-    const TemplatesUI = {
-      render() {
-        const list = document.getElementById("templatesList");
-        if (!list) return;
-
-        list.innerHTML = Templates.defaults.map((t, idx) => `
-          <button class="btn w-full glass-soft rounded-4xl p-4 text-left" onclick="TemplatesUI.apply(${idx})">
-            <div class="font-black text-lg">${escapeHtml(t.name)}</div>
-            <div class="text-xs muted mt-1">${t.items.map(i => `${escapeHtml(i.foodName)} × ${i.qty}`).join(" · ")}</div>
-            <div class="mt-2 pill inline-block rounded-full px-3 py-1 text-[11px] font-black">Add to ${escapeHtml(App.state.ui.currentMeal)}</div>
-          </button>
-        `).join("");
-      },
-
-      apply(idx) {
-        const t = Templates.defaults[idx];
-        const all = FoodDB.getAll();
-        const meal = App.state.ui.currentMeal;
-
-        for (const it of t.items) {
-          const f = all.find(x => x.name === it.foodName);
-          if (!f) continue;
-
-          const q = Number(it.qty) || 1;
-          App.addLog({
-            id: crypto.randomUUID(),
-            meal,
-            foodId: f.id,
-            name: f.name,
-            cat: f.cat,
-            unit: f.unit,
-            qty: q,
-            kcal: Utils.round0(f.kcal * q),
-            pro: Utils.round0(f.pro * q),
-            carb: Utils.round0(f.carb * q),
-            fat: Utils.round0(f.fat * q),
-            fiber: Utils.round0((f.fiber||0) * q),
-            sugar: Utils.round0((f.sugar||0) * q),
-            sodium: Utils.round0((f.sodium||0) * q),
-            ts: Date.now()
-          });
+    /* ---------- History (edit) ---------- */
+    var History = {
+      editingDate: null,
+      renderCalendar: function(){
+        var body = document.getElementById('calendar-body');
+        body.innerHTML = '';
+        var keys = Object.keys(App.state.days).sort().reverse();
+        if (!keys.length){
+          body.innerHTML = '<div class="col-span-7 text-center text-zinc-700 font-black text-sm py-10">No days logged yet.</div>';
+          return;
         }
+        for (var i=0;i<keys.length;i++){
+          var date = keys[i];
+          var day = App.state.days[date];
+          var kcal = 0;
+          for (var j=0;j<(day.logs||[]).length;j++) kcal += Number(day.logs[j].c)||0;
+          kcal -= Number(day.burn)||0;
 
-        UI.closeSheets();
-        Renderer.renderAll();
-      }
-    };
+          var goal = Number(App.state.settings.c)||1650;
+          var bad = kcal > goal*1.1;
+          var cls = bad ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/20';
 
-    const Insights = {
-      kcalChart: null,
-      macroChart: null,
-
-      historyRange(days=7) {
-        const keys = Object.keys(App.state.days).sort();
-        const last = keys.slice(-days);
-
-        const rows = last.map(k => {
-          const logs = (App.state.days[k]?.logs || []);
-          const t = logs.reduce((acc,l)=>{acc.kcal+=l.kcal; acc.pro+=l.pro; acc.carb+=l.carb; acc.fat+=l.fat; return acc;},{kcal:0,pro:0,carb:0,fat:0});
-          return { date: k, ...t };
-        });
-
-        const today = Utils.todayKey();
-        if (!rows.find(r => r.date === today)) rows.push({ date: today, kcal:0, pro:0, carb:0, fat:0 });
-        return rows.slice(-days);
-      },
-
-      calculateStreak() {
-        const goal = App.state.settings.goalKcal;
-        const today = new Date();
-        let streak = 0;
-
-        for (let i = 0; i < 365; i++) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const key = d.toISOString().split("T")[0];
-
-          const logs = (App.state.days[key]?.logs || []);
-          const kcal = logs.reduce((s,l)=>s+l.kcal,0);
-
-          if (!logs.length && i !== 0) break;
-          if (kcal >= goal * 0.9 && kcal <= goal * 1.1) streak++;
-          else break;
+          body.innerHTML += ''
+            + '<button class="aspect-square rounded-xl flex items-center justify-center text-xs font-black ' + cls + ' btn-press"'
+            + ' onclick="History.openEdit(\'' + escAttr_(date) + '\')">'
+            +   date.split('-')[2]
+            + '</button>';
         }
-        return streak;
       },
+      openEdit: function(date){
+        this.editingDate = date;
+        var day = App.getDay(date);
+        document.getElementById('ed-date').innerText = date;
+        document.getElementById('ed-water').value = day.water || 0;
+        document.getElementById('ed-burn').value = day.burn || 0;
 
-      render() {
-        const rows = this.historyRange(7);
-        const labels = rows.map(r => {
-          const d = new Date(r.date + "T00:00:00");
-          return d.toLocaleDateString(undefined, { month:"short", day:"numeric" });
-        });
-
-        const avg = rows.length ? Math.round(rows.reduce((s,r)=>s+r.kcal,0)/rows.length) : 0;
-        document.getElementById("avgKcal").innerText = avg;
-        document.getElementById("streakDays").innerText = this.calculateStreak();
-
-        this.renderKcalChart(labels, rows.map(r=>r.kcal));
-        this.renderMacroChart(["Protein","Carbs","Fat"], [
-          rows.reduce((s,r)=>s+r.pro,0),
-          rows.reduce((s,r)=>s+r.carb,0),
-          rows.reduce((s,r)=>s+r.fat,0)
-        ]);
-      },
-
-      renderKcalChart(labels, kcals) {
-        const ctx = document.getElementById("chartKcal").getContext("2d");
-        if (this.kcalChart) this.kcalChart.destroy();
-
-        const goal = App.state.settings.goalKcal;
-
-        this.kcalChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [{
-              label: "Calories",
-              data: kcals,
-              borderColor: "rgba(139,211,199,0.95)",
-              backgroundColor: "rgba(139,211,199,0.14)",
-              fill: true,
-              tension: 0.4,
-              pointRadius: 3
-            },{
-              label: "Goal",
-              data: labels.map(()=>goal),
-              borderColor: "rgba(107,212,255,0.8)",
-              borderDash: [6,6],
-              pointRadius: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { labels: { color: "rgba(255,255,255,0.65)" } }
-            },
-            scales: {
-              x: { ticks: { color: "rgba(255,255,255,0.45)" }, grid: { display:false } },
-              y: { ticks: { color: "rgba(255,255,255,0.45)" }, grid: { color: "rgba(255,255,255,0.06)" }, beginAtZero:true }
-            }
-          }
-        });
-      },
-
-      renderMacroChart(labels, data) {
-        const ctx = document.getElementById("chartMacros").getContext("2d");
-        if (this.macroChart) this.macroChart.destroy();
-
-        this.macroChart = new Chart(ctx, {
-          type: "doughnut",
-          data: {
-            labels,
-            datasets: [{
-              data,
-              backgroundColor: [
-                "rgba(139,211,199,0.85)",
-                "rgba(107,212,255,0.75)",
-                "rgba(255,90,95,0.70)"
-              ],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: "bottom", labels: { color: "rgba(255,255,255,0.65)" } }
-            }
-          }
-        });
-      }
-    };
-
-    // --- Swipe navigation (Today <-> Insights <-> Library) ---
-    const Swipe = {
-      startX: 0, startY: 0, endX: 0, endY: 0, startT: 0, tracking: false,
-
-      init() {
-        const views = [
-          document.getElementById("todayView"),
-          document.getElementById("insightsView"),
-          document.getElementById("libraryView"),
-        ];
-
-        views.forEach(v => {
-          v.addEventListener("touchstart", this.onStart.bind(this), { passive: true });
-          v.addEventListener("touchmove", this.onMove.bind(this), { passive: true });
-          v.addEventListener("touchend", this.onEnd.bind(this), { passive: true });
-        });
-      },
-
-      sheetsOpen() {
-        const backdropHidden = document.getElementById("sheetBackdrop").classList.contains("hidden");
-        if (!backdropHidden) return true;
-        const ids = ["foodSheet","customSheet","settingsSheet","templatesSheet"];
-        return ids.some(id => !document.getElementById(id).classList.contains("translate-y-full"));
-      },
-
-      shouldIgnoreTarget(target) {
-        if (!target) return false;
-        if (target.closest("input, textarea, select, button")) return true;
-        if (target.closest("[data-no-swipe]")) return true;
-        if (target.closest(".overflow-x-auto")) return true;
-        return false;
-      },
-
-      onStart(e) {
-        if (this.sheetsOpen()) return;
-        const t = e.touches?.[0];
-        if (!t) return;
-        if (this.shouldIgnoreTarget(e.target)) return;
-
-        this.tracking = true;
-        this.startX = t.clientX;
-        this.startY = t.clientY;
-        this.endX = t.clientX;
-        this.endY = t.clientY;
-        this.startT = Date.now();
-      },
-
-      onMove(e) {
-        if (!this.tracking) return;
-        const t = e.touches?.[0];
-        if (!t) return;
-        this.endX = t.clientX;
-        this.endY = t.clientY;
-      },
-
-      onEnd() {
-        if (!this.tracking) return;
-        this.tracking = false;
-
-        const dx = this.endX - this.startX;
-        const dy = this.endY - this.startY;
-        const dt = Date.now() - this.startT;
-
-        const absX = Math.abs(dx);
-        const absY = Math.abs(dy);
-
-        if (dt > 700) return;
-        if (absX < 60) return;
-        if (absX < absY * 1.2) return;
-
-        const order = ["today","insights","library"];
-        const cur = App.state.ui.view || "today";
-        const idx = order.indexOf(cur);
-
-        if (dx < 0) {
-          const next = order[Math.min(order.length - 1, idx + 1)];
-          if (next !== cur) UI.nav(next);
+        // logs list
+        var html = '';
+        var logs = day.logs || [];
+        if (!logs.length){
+          html = '<div class="text-center py-6 text-zinc-700 text-[10px] border border-dashed border-zinc-800 rounded-2xl font-black">No logs</div>';
         } else {
-          const prev = order[Math.max(0, idx - 1)];
-          if (prev !== cur) UI.nav(prev);
+          for (var i=0;i<logs.length;i++){
+            var l = logs[i];
+            html += ''
+              + '<div class="glass-card p-4 flex justify-between items-center">'
+              +   '<div>'
+              +     '<div class="text-white font-black text-sm">' + esc_(l.n) + ' <span class="text-zinc-500 font-semibold">× ' + esc_(String(l.qty||1)) + '</span></div>'
+              +     '<div class="text-[10px] text-zinc-500 mt-1 font-bold">' + esc_(l.meal||'') + ' • ' + Math.round(l.c||0) + ' kcal</div>'
+              +   '</div>'
+              +   '<button class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-red-400 btn-press flex items-center justify-center" onclick="History.deleteLog(' + i + ')"><i class="ph-bold ph-trash"></i></button>'
+              + '</div>';
+          }
+        }
+        document.getElementById('ed-logs').innerHTML = html;
+
+        UI.open('editday');
+      },
+      saveDayEdits: function(){
+        if (!this.editingDate) return;
+        var d = App.getDay(this.editingDate);
+        var w = parseInt(document.getElementById('ed-water').value,10);
+        var b = parseInt(document.getElementById('ed-burn').value,10);
+        d.water = isFinite(w) ? w : 0;
+        d.burn = isFinite(b) ? b : 0;
+        App.save();
+        Render.all();
+        this.renderCalendar();
+        UI.closeAll();
+      },
+      deleteLog: function(idx){
+        if (!this.editingDate) return;
+        var d = App.getDay(this.editingDate);
+        d.logs.splice(idx,1);
+        App.save();
+        Render.all();
+        this.openEdit(this.editingDate);
+      },
+      deleteDay: function(){
+        if (!this.editingDate) return;
+        delete App.state.days[this.editingDate];
+        App.save();
+        Render.all();
+        this.renderCalendar();
+        UI.closeAll();
+      }
+    };
+
+    /* ---------- Trends ---------- */
+    var Trends = {
+      mode: 'day', // day | week | month
+      setMode: function(m){
+        this.mode = m;
+
+        var map = {day:'Daily',week:'Weekly',month:'Monthly'};
+        document.getElementById('trend-label').innerText = map[m] || 'Daily';
+
+        // button styling
+        var ids = ['day','week','month'];
+        for (var i=0;i<ids.length;i++){
+          var id = ids[i];
+          var b = document.getElementById('btn-trend-'+id);
+          if (!b) continue;
+          if (id === m){
+            b.classList.add('bg-zinc-800','text-white');
+            b.classList.remove('text-zinc-400');
+          } else {
+            b.classList.remove('bg-zinc-800','text-white');
+            b.classList.add('text-zinc-400');
+          }
+        }
+        this.renderAll();
+      },
+      renderAll: function(){
+        this.renderNetChart();
+        this.renderWeightChart();
+        this.predictETA();
+      },
+      renderNetChart: function(){
+        var points = this.getNetSeries_();
+        var labels = points.map(function(p){ return p.label; });
+        var data = points.map(function(p){ return p.net; });
+
+        if (window.netChart) window.netChart.destroy();
+        window.netChart = new Chart(document.getElementById('chart-net'), {
+          type: 'line',
+          data: { labels: labels, datasets: [{ label:'Net', data: data, tension:0.35, borderColor:'#22c55e' }]},
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}, scales:{ x:{ display:false }, y:{ display:false } } }
+        });
+      },
+      renderWeightChart: function(){
+        var dates = Object.keys(App.state.weightHistory).sort();
+        var weightData = dates.map(function(k){ return App.state.weightHistory[k]; });
+        var labels = dates.map(function(d){ return d.slice(5); });
+
+        if (window.wChart) window.wChart.destroy();
+        window.wChart = new Chart(document.getElementById('chart-weight'), {
+          type:'line',
+          data:{ labels: labels, datasets:[{ label:'Weight', data: weightData, tension:0.35, borderColor:'#3b82f6' }]},
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}, scales:{ x:{ display:false }, y:{ display:false } } }
+        });
+      },
+      predictETA: function(){
+        var weights = Object.keys(App.state.weightHistory).sort().map(function(k){ return App.state.weightHistory[k]; });
+        if (weights.length < 2){
+          document.getElementById('eta-date').innerText = "Log 2+ Weights";
+          return;
+        }
+        var diff = weights[0] - weights[weights.length-1];
+        var velocity = diff / weights.length; // kg/day approx
+        if (velocity <= 0){
+          document.getElementById('eta-date').innerText = "Steady State";
+          return;
+        }
+        var current = weights[weights.length-1];
+        var days = Math.ceil((current - 72) / velocity);
+        if (!isFinite(days) || days < 0){
+          document.getElementById('eta-date').innerText = "Steady State";
+          return;
+        }
+        var d = new Date();
+        d.setDate(d.getDate() + days);
+        document.getElementById('eta-date').innerText = d.toLocaleDateString([], {month:'short', day:'numeric'});
+      },
+      getNetSeries_: function(){
+        // Build daily net series from days
+        var keys = Object.keys(App.state.days).sort(); // ascending
+        var daily = [];
+        for (var i=0;i<keys.length;i++){
+          var date = keys[i];
+          var day = App.state.days[date];
+          var eaten = 0;
+          for (var j=0;j<(day.logs||[]).length;j++) eaten += Number(day.logs[j].c)||0;
+          var net = eaten - (Number(day.burn)||0);
+          daily.push({ date: date, net: Math.round(net) });
+        }
+
+        if (this.mode === 'day'){
+          var last = daily.slice(Math.max(0, daily.length-14));
+          document.getElementById('trend-sub').innerText = 'Last ' + (last.length||0) + ' days';
+          return last.map(function(p){ return { label: p.date.slice(5), net: p.net }; });
+        }
+
+        if (this.mode === 'week'){
+          // group by ISO week-ish: use Monday-based week start
+          var buckets = {};
+          for (var k=0;k<daily.length;k++){
+            var dt = new Date(daily[k].date + 'T00:00:00Z');
+            // shift to Monday
+            var day = dt.getUTCDay(); // 0=Sun
+            var diff = (day === 0 ? -6 : 1 - day);
+            dt.setUTCDate(dt.getUTCDate() + diff);
+            var wk = dt.toISOString().slice(0,10); // week start
+            if (!buckets[wk]) buckets[wk] = { sum:0, n:0 };
+            buckets[wk].sum += daily[k].net;
+            buckets[wk].n += 1;
+          }
+          var wkeys = Object.keys(buckets).sort();
+          var series = wkeys.map(function(wk){
+            return { label: wk.slice(5), net: Math.round(buckets[wk].sum / buckets[wk].n) };
+          });
+          series = series.slice(Math.max(0, series.length-12));
+          document.getElementById('trend-sub').innerText = 'Last ' + series.length + ' weeks (avg/day net)';
+          return series;
+        }
+
+        // month
+        var mb = {};
+        for (var z=0;z<daily.length;z++){
+          var m = daily[z].date.slice(0,7); // YYYY-MM
+          if (!mb[m]) mb[m] = { sum:0, n:0 };
+          mb[m].sum += daily[z].net;
+          mb[m].n += 1;
+        }
+        var mkeys = Object.keys(mb).sort();
+        var ms = mkeys.map(function(mm){
+          return { label: mm.slice(5), net: Math.round(mb[mm].sum / mb[mm].n) };
+        });
+        ms = ms.slice(Math.max(0, ms.length-12));
+        document.getElementById('trend-sub').innerText = 'Last ' + ms.length + ' months (avg/day net)';
+        return ms;
+      }
+    };
+
+    /* ---------- Secure Cloud Sync ---------- */
+    var Cloud = {
+      // canonical string: method|path|deviceId|ts|nonce|sha256(body)
+      push: async function(){
+        var url = (App.state.settings.url||'').trim();
+        var key = (App.state.settings.key||'').trim();
+        var deviceId = (App.state.settings.deviceId||'').trim();
+        if (!url || !key) return alert("Set Web App URL + Secret Key in Settings.");
+        if (!deviceId) return alert("Missing deviceId");
+
+        var btn = document.getElementById('sync-btn');
+        btn.querySelector('i').classList.add('sync-spin');
+
+        try {
+          var ts = Date.now();
+          var nonce = Crypto.randNonce();
+          var data = App.state; // full state
+          var bodyObj = { deviceId: deviceId, ts: ts, nonce: nonce, data: data };
+          var bodyJson = JSON.stringify(bodyObj);
+
+          var bodyHash = await Crypto.sha256Hex(bodyJson);
+          var sigBase = "POST|/sync|" + deviceId + "|" + ts + "|" + nonce + "|" + bodyHash;
+          var sig = await Crypto.hmacHex(key, sigBase);
+
+          var payload = {
+            deviceId: deviceId,
+            ts: ts,
+            nonce: nonce,
+            sig: sig,
+            data: data
+          };
+
+          var resp = await fetch(url + "?action=sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          var j = await resp.json().catch(function(){ return null; });
+          if (!j || !j.ok) throw new Error((j && j.error) ? j.error : ("HTTP " + resp.status));
+
+          alert("Cloud push ✅");
+        } catch (e) {
+          alert("Sync failed: " + e.message);
+        } finally {
+          btn.querySelector('i').classList.remove('sync-spin');
+        }
+      },
+
+      pullLatest: async function(){
+        var url = (App.state.settings.url||'').trim();
+        var key = (App.state.settings.key||'').trim();
+        var deviceId = (App.state.settings.deviceId||'').trim();
+        if (!url || !key) return alert("Set Web App URL + Secret Key in Settings.");
+        if (!deviceId) return alert("Missing deviceId");
+
+        var btn = document.getElementById('pull-btn');
+        btn.querySelector('i').classList.add('sync-spin');
+
+        try {
+          var ts = Date.now();
+          var nonce = Crypto.randNonce();
+          var sigBase = "GET|/state|" + deviceId + "|" + ts + "|" + nonce + "|";
+          var sig = await Crypto.hmacHex(key, sigBase);
+
+          var qs = "action=state&deviceId=" + encodeURIComponent(deviceId) +
+                   "&ts=" + encodeURIComponent(ts) +
+                   "&nonce=" + encodeURIComponent(nonce) +
+                   "&sig=" + encodeURIComponent(sig);
+
+          var resp = await fetch(url + "?" + qs, { method: "GET" });
+          var j = await resp.json().catch(function(){ return null; });
+          if (!j || !j.ok) throw new Error((j && j.error) ? j.error : ("HTTP " + resp.status));
+
+          if (!j.data) return alert("No cloud state found yet.");
+
+          // Preserve local URL/key/deviceId, but replace rest
+          var keep = App.state.settings;
+          App.state = j.data;
+          App.state.settings.url = keep.url;
+          App.state.settings.key = keep.key;
+          App.state.settings.deviceId = keep.deviceId;
+
+          App.save();
+          Render.all();
+          History.renderCalendar();
+          Trends.renderAll();
+          alert("Cloud pull ✅");
+        } catch (e) {
+          alert("Pull failed: " + e.message);
+        } finally {
+          btn.querySelector('i').classList.remove('sync-spin');
         }
       }
     };
 
-    function escapeHtml(str) {
-      return String(str || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
+    /* ---------- Crypto helpers (Web Crypto) ---------- */
+    var Crypto = {
+      te: new TextEncoder(),
+      randNonce: function(){
+        var a = new Uint8Array(16);
+        crypto.getRandomValues(a);
+        var s = '';
+        for (var i=0;i<a.length;i++){
+          s += ('0' + a[i].toString(16)).slice(-2);
+        }
+        return s;
+      },
+      sha256Hex: async function(str){
+        var buf = await crypto.subtle.digest('SHA-256', this.te.encode(str));
+        return this.bufToHex(buf);
+      },
+      hmacHex: async function(secret, msg){
+        var key = await crypto.subtle.importKey(
+          'raw',
+          this.te.encode(secret),
+          { name:'HMAC', hash:'SHA-256' },
+          false,
+          ['sign']
+        );
+        var sig = await crypto.subtle.sign('HMAC', key, this.te.encode(msg));
+        return this.bufToHex(sig);
+      },
+      bufToHex: function(buf){
+        var bytes = new Uint8Array(buf);
+        var hex = '';
+        for (var i=0;i<bytes.length;i++) hex += ('0' + bytes[i].toString(16)).slice(-2);
+        return hex;
+      }
+    };
 
+    function esc_(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+    function escAttr_(s){ return String(s||'').replace(/'/g,"&#39;"); }
+
+    // boot
     App.init();
-    Foods.setFilter(App.state.ui.foodFilter || "all");
-
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") UI.closeSheets();
-    });
   </script>
 </body>
 </html>
