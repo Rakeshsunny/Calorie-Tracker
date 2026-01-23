@@ -1,4 +1,4 @@
-const CACHE = "m72-elite-cache-v1";
+const CACHE = "m72-elite-cache-v5";
 const ASSETS = [
   "./",
   "./index.html",
