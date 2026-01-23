@@ -2,965 +2,475 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <meta name="app-version" content="v1.0.3">
-  <meta name="theme-color" content="#000000">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
   <title>Mission 72 | Elite</title>
 
+  <!-- Tailwind + Icons + Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <style>
-    .view{display:none}
-    .view.active-view{display:block!important}
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
 
-    body{
-      background:#000;color:#f4f4f5;font-family:ui-sans-serif,system-ui,sans-serif;
-      height:100dvh;width:100vw;display:flex;flex-direction:column;overflow:hidden
-    }
-    #scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 40px 20px;z-index:10}
-    #nav-bar{
-      height:calc(80px + env(safe-area-inset-bottom));
-      background:#09090b;border-top:1px solid #27272a;
-      display:flex;justify-content:space-around;align-items:center;
-      padding-bottom:env(safe-area-inset-bottom);flex-shrink:0;z-index:50
-    }
-    .glass-card{background:#121212;border:1px solid #27272a;border-radius:24px}
-    .nav-btn{color:#52525b;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:800;font-size:9px;width:25%;transition:color .2s}
-    .nav-btn.active{color:#fff}
-    .nav-btn.active i{color:#3b82f6}
-    ::-webkit-scrollbar{display:none}
-    .btn-press:active{transform:scale(.96)}
-
-    .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none}
-    .sheet{
-      position:fixed;bottom:0;left:0;right:0;background:#09090b;border-top:1px solid #27272a;
-      border-radius:32px 32px 0 0;z-index:101;padding:24px;transform:translateY(100%);
-      transition:transform .3s ease;max-height:85vh;overflow-y:auto
-    }
-    .sheet.open{transform:translateY(0)}
-    input, select{
-      background:#121212;border:1px solid #27272a;border-radius:12px;padding:12px;color:#fff;outline:none;width:100%;font-size:14px
-    }
-    .sync-spin{animation:spin 1s linear infinite}
-    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;
-      border:1px solid #27272a;background:#0b0b0f;color:#d4d4d8;font-weight:800;font-size:11px
-    }
-    .barwrap{height:10px;border-radius:999px;background:#0b0b0f;border:1px solid #27272a;overflow:hidden}
-    .barfill{height:100%;border-radius:999px}
-    .segbtn{flex:1;padding:10px 12px;border-radius:14px;font-weight:900;font-size:11px}
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <div id="scroll-area">
+  <!-- TOP: App Shell -->
+  <div id="app">
+    <!-- Scrollable content area -->
+    <main id="scroll-area">
 
-    <!-- HOME -->
-    <div id="view-home" class="view active-view">
-      <header class="flex justify-between items-center mb-6 pt-2">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-500">
-            <i class="ph-fill ph-rocket-launch text-2xl"></i>
-          </div>
-          <div>
-            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Mission 72</div>
-            <div class="text-lg font-black text-white">72.0 kg Goal</div>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="Cloud.pullLatest()" id="pull-btn" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-sky-400" title="Pull from Cloud">
-            <i class="ph-bold ph-cloud-arrow-down"></i>
-          </button>
-          <button onclick="Cloud.push()" id="sync-btn" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-emerald-500" title="Push to Cloud">
-            <i class="ph-bold ph-cloud-arrow-up"></i>
-          </button>
-          <button onclick="UI.open('settings')" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-zinc-400" title="Settings">
-            <i class="ph ph-gear text-xl"></i>
-          </button>
-        </div>
-      </header>
-
-      <div class="glass-card p-6 relative overflow-hidden mb-4">
-        <div class="flex justify-between items-center relative z-10">
-          <div>
-            <div class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Remaining</div>
-            <div class="text-6xl font-black tracking-tighter" id="val-rem">0</div>
-            <div class="mt-3 flex gap-2">
-              <span class="px-2 py-1 bg-zinc-900 rounded text-[9px] font-black text-zinc-400 uppercase">Net: <span id="val-net">0</span></span>
-              <span class="px-2 py-1 bg-blue-900/20 border border-blue-500/20 rounded text-[9px] font-black text-blue-400"><span id="header-weight">--</span> kg</span>
+      <!-- VIEW: HOME -->
+      <section id="view-home" class="view active-view">
+        <header class="topbar">
+          <div class="brand">
+            <div class="brandIcon">
+              <i class="ph-fill ph-rocket-launch"></i>
+            </div>
+            <div>
+              <div class="brandKicker">Mission 72</div>
+              <div class="brandTitle">Elite Tracker</div>
             </div>
           </div>
-          <div class="relative w-20 h-20 flex items-center justify-center">
-            <svg class="w-full h-full -rotate-90">
-              <circle cx="40" cy="40" r="34" stroke="#27272a" stroke-width="5" fill="transparent"/>
-              <circle id="ring-progress" cx="40" cy="40" r="34" stroke="#3b82f6" stroke-width="5" fill="transparent" stroke-dasharray="214" stroke-dashoffset="214" stroke-linecap="round"/>
-            </svg>
-            <span class="absolute text-sm font-black" id="val-pct">0%</span>
+
+          <div class="topActions">
+            <button class="iconBtn btn-press" id="sync-btn" title="Sync to Google Sheets" onclick="Sync.syncNow()">
+              <i class="ph-bold ph-arrows-clockwise"></i>
+            </button>
+            <button class="iconBtn btn-press" title="Settings" onclick="UI.openSheet('settings')">
+              <i class="ph ph-gear"></i>
+            </button>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <!-- Macro progress bars -->
-      <div class="glass-card p-5 mb-6">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-dna text-blue-400"></i> Protein</div>
-          <div class="text-xs font-black text-zinc-500"><span id="curr-pro">0</span>/<span id="tgt-pro">130</span>g • <span id="pct-pro">0</span>%</div>
-        </div>
-        <div class="barwrap mb-4"><div id="bar-pro" class="barfill" style="width:0%;background:#3b82f6"></div></div>
+        <!-- HERO -->
+        <section class="card hero">
+          <div class="heroRow">
+            <div>
+              <div class="kicker">Remaining</div>
+              <div class="heroBig" id="val-rem">0</div>
 
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-fire text-amber-400"></i> Carbs</div>
-          <div class="text-xs font-black text-zinc-500"><span id="curr-carb">0</span>/<span id="tgt-carb">170</span>g • <span id="pct-carb">0</span>%</div>
-        </div>
-        <div class="barwrap mb-4"><div id="bar-carb" class="barfill" style="width:0%;background:#f59e0b"></div></div>
+              <div class="chips">
+                <span class="chip">Net: <b id="val-net">0</b></span>
+                <span class="chip chipBlue">
+                  Weight: <b id="header-weight">--</b> kg
+                </span>
+              </div>
+            </div>
 
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2 text-sm font-black"><i class="ph-fill ph-drop-half text-rose-400"></i> Fat</div>
-          <div class="text-xs font-black text-zinc-500"><span id="curr-fat">0</span>/<span id="tgt-fat">55</span>g • <span id="pct-fat">0</span>%</div>
-        </div>
-        <div class="barwrap"><div id="bar-fat" class="barfill" style="width:0%;background:#fb7185"></div></div>
-      </div>
+            <div class="ringWrap">
+              <svg class="ring" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" class="ringTrack"></circle>
+                <circle id="ring-progress" cx="50" cy="50" r="40" class="ringProg"></circle>
+              </svg>
+              <div class="ringText"><span id="val-pct">0%</span></div>
+            </div>
+          </div>
 
-      <div class="grid grid-cols-2 gap-3 mb-6">
-        <div class="glass-card p-4 flex justify-between items-center btn-press" onclick="Data.addWater()">
+          <!-- Macros with progress bars -->
+          <div class="macroGrid">
+            <div class="macroBox">
+              <div class="macroTop">
+                <div class="macroLabel"><i class="ph-bold ph-fork-knife"></i> Protein</div>
+                <div class="macroVal"><span id="curr-pro">0</span>/<span id="tgt-pro">0</span>g</div>
+              </div>
+              <div class="bar">
+                <div id="bar-pro" class="barFill"></div>
+              </div>
+              <div class="macroPct"><span id="pct-pro">0</span>%</div>
+            </div>
+
+            <div class="macroBox">
+              <div class="macroTop">
+                <div class="macroLabel"><i class="ph-bold ph-bread"></i> Carbs</div>
+                <div class="macroVal"><span id="curr-carb">0</span>/<span id="tgt-carb">0</span>g</div>
+              </div>
+              <div class="bar">
+                <div id="bar-carb" class="barFill"></div>
+              </div>
+              <div class="macroPct"><span id="pct-carb">0</span>%</div>
+            </div>
+
+            <div class="macroBox">
+              <div class="macroTop">
+                <div class="macroLabel"><i class="ph-bold ph-drop-half"></i> Fat</div>
+                <div class="macroVal"><span id="curr-fat">0</span>/<span id="tgt-fat">0</span>g</div>
+              </div>
+              <div class="bar">
+                <div id="bar-fat" class="barFill"></div>
+              </div>
+              <div class="macroPct"><span id="pct-fat">0</span>%</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QUICK CARDS -->
+        <section class="grid2">
+          <button class="card mini btn-press" onclick="Data.addWater()">
+            <div>
+              <div class="kicker">Water</div>
+              <div class="miniBig"><span id="val-water">0</span><span class="miniUnit">/3.0L</span></div>
+            </div>
+            <i class="ph-bold ph-drop miniIcon"></i>
+          </button>
+
+          <button class="card mini btn-press" onclick="UI.openSheet('exercise')">
+            <div>
+              <div class="kicker">Active Burn</div>
+              <div class="miniBig plus">+ <span id="val-burned">0</span></div>
+            </div>
+            <i class="ph-bold ph-lightning miniIcon"></i>
+          </button>
+        </section>
+
+        <!-- MEAL TABS -->
+        <section class="tabs">
+          <button id="btn-Breakfast" onclick="App.setMeal('Breakfast')">Breakfast</button>
+          <button id="btn-Lunch" onclick="App.setMeal('Lunch')">Lunch</button>
+          <button id="btn-Snack" onclick="App.setMeal('Snack')">Snack</button>
+          <button id="btn-Dinner" onclick="App.setMeal('Dinner')">Dinner</button>
+        </section>
+
+        <!-- SEARCH -->
+        <section class="card">
+          <div class="searchWrap">
+            <input id="search-input" type="text" placeholder="Search foods (egg, dal, roti...)" oninput="Foods.search()" />
+            <i class="ph ph-magnifying-glass"></i>
+          </div>
+
+          <div class="searchActions">
+            <button class="btn-press actionBtn" onclick="UI.openSheet('foodCreate')">
+              <i class="ph-bold ph-plus"></i> Add Custom Food
+            </button>
+            <button class="btn-press actionBtn" onclick="UI.openSheet('weight')">
+              <i class="ph-bold ph-scales"></i> Log Weight
+            </button>
+          </div>
+
+          <div id="search-results" class="hidden mt-3 space-y-2"></div>
+        </section>
+
+        <!-- LOG LIST -->
+        <section class="mt-4">
+          <div class="sectionHead">
+            <div>
+              <div class="kicker" id="logMealTitle">Breakfast</div>
+              <div class="sectionTitle">Today Log</div>
+            </div>
+            <button class="btn-press dangerBtn" onclick="Data.resetToday()">Reset</button>
+          </div>
+          <div id="log-list" class="space-y-2"></div>
+        </section>
+      </section>
+
+      <!-- VIEW: TRENDS -->
+      <section id="view-trends" class="view">
+        <header class="viewHeader">
           <div>
-            <div class="text-[9px] font-black text-zinc-500 uppercase">Water</div>
-            <div class="text-lg font-black text-cyan-400"><span id="val-water">0</span><span class="text-xs text-zinc-600">/3L</span></div>
+            <div class="kicker">Trends</div>
+            <div class="sectionTitle">Performance</div>
           </div>
-          <i class="ph-fill ph-drop text-cyan-500 text-xl opacity-60"></i>
+        </header>
+
+        <div class="segmented">
+          <button id="trend-day" onclick="Trends.setMode('day')">Day</button>
+          <button id="trend-week" onclick="Trends.setMode('week')">Week</button>
+          <button id="trend-month" onclick="Trends.setMode('month')">Month</button>
         </div>
-        <div class="glass-card p-4 flex justify-between items-center btn-press" onclick="UI.open('exercise')">
+
+        <section class="card p-5">
+          <div class="kicker">Calories (Net)</div>
+          <div class="h-56 mt-3"><canvas id="chart-net"></canvas></div>
+        </section>
+
+        <section class="card p-5 mt-4">
+          <div class="kicker">Macros</div>
+          <div class="h-56 mt-3"><canvas id="chart-macros"></canvas></div>
+        </section>
+
+        <section class="card p-5 mt-4">
+          <div class="kicker">Weight</div>
+          <div class="h-56 mt-3"><canvas id="chart-weight"></canvas></div>
+        </section>
+      </section>
+
+      <!-- VIEW: HISTORY (EDITABLE) -->
+      <section id="view-history" class="view">
+        <header class="viewHeader">
           <div>
-            <div class="text-[9px] font-black text-zinc-500 uppercase">Active</div>
-            <div class="text-lg font-black text-emerald-400">+ <span id="val-burned">0</span></div>
+            <div class="kicker">History</div>
+            <div class="sectionTitle">Edit past days</div>
           </div>
-          <i class="ph-fill ph-lightning text-emerald-500 text-xl opacity-60"></i>
+        </header>
+
+        <section class="card p-5">
+          <div class="kicker">Pick a day</div>
+          <div id="history-days" class="mt-3 grid grid-cols-7 gap-2"></div>
+          <div class="muted mt-3 text-xs">Tap a date square to edit water/burn/logs. Long-press to delete a day.</div>
+        </section>
+
+        <section class="card p-5 mt-4 hidden" id="history-editor">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="kicker">Editing</div>
+              <div class="sectionTitle" id="history-date-title">YYYY-MM-DD</div>
+            </div>
+            <button class="btn-press actionBtn" onclick="UI.openSheet('historyDayEdit')">
+              <i class="ph-bold ph-pencil"></i> Day settings
+            </button>
+          </div>
+
+          <div class="mt-4 space-y-2" id="history-log-list"></div>
+        </section>
+      </section>
+
+      <!-- VIEW: LIBRARY -->
+      <section id="view-library" class="view">
+        <header class="viewHeader">
+          <div>
+            <div class="kicker">Library</div>
+            <div class="sectionTitle">Saved foods</div>
+          </div>
+        </header>
+
+        <section class="card p-5">
+          <div class="searchWrap">
+            <input id="library-search" type="text" placeholder="Search saved foods..." oninput="Library.render()" />
+            <i class="ph ph-magnifying-glass"></i>
+          </div>
+          <div class="muted text-xs mt-3">Save foods from search (★). Tap an item to add to your current meal.</div>
+        </section>
+
+        <div id="library-list" class="mt-4 space-y-2"></div>
+      </section>
+
+    </main>
+
+    <!-- Bottom nav -->
+    <nav id="nav-bar">
+      <button class="nav-btn active" onclick="UI.nav('home', this)">
+        <i class="ph-fill ph-house"></i><span>Home</span>
+      </button>
+      <button class="nav-btn" onclick="UI.nav('trends', this)">
+        <i class="ph-fill ph-chart-line-up"></i><span>Trends</span>
+      </button>
+      <button class="nav-btn" onclick="UI.nav('history', this)">
+        <i class="ph-fill ph-calendar"></i><span>History</span>
+      </button>
+      <button class="nav-btn" onclick="UI.nav('library', this)">
+        <i class="ph-fill ph-books"></i><span>Library</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- BACKDROP + SHEETS -->
+  <div id="backdrop" class="sheet-backdrop" onclick="UI.closeAllSheets()"></div>
+
+  <!-- SHEET: SETTINGS -->
+  <section id="sheet-settings" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker">Settings</div>
+        <div class="sheetTitle">Profile & Sync</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <div class="field">
+        <label>Daily Calorie Goal</label>
+        <input id="s-cal" type="number" placeholder="1650" />
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div class="field">
+          <label>Protein (g)</label>
+          <input id="s-pro" type="number" placeholder="130" />
+        </div>
+        <div class="field">
+          <label>Carbs (g)</label>
+          <input id="s-carb" type="number" placeholder="170" />
+        </div>
+        <div class="field">
+          <label>Fat (g)</label>
+          <input id="s-fat" type="number" placeholder="55" />
         </div>
       </div>
 
-      <div class="bg-[#121212] p-1 rounded-2xl flex border border-zinc-800 mb-6">
-        <button class="flex-1 py-3 text-[10px] font-black text-white bg-zinc-800 rounded-xl" onclick="App.setMeal('Breakfast')" id="btn-Breakfast">Breakfast</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Lunch')" id="btn-Lunch">Lunch</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Snack')" id="btn-Snack">Snack</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Dinner')" id="btn-Dinner">Dinner</button>
+      <div class="field">
+        <label>Google Apps Script Web App URL</label>
+        <input id="s-url" type="text" placeholder="https://script.google.com/macros/s/....../exec" />
       </div>
 
-      <div class="relative mb-4">
-        <input type="text" id="search-input" placeholder="Search food..." oninput="Foods.search()" class="w-full bg-[#121212] border border-zinc-800 text-white px-5 py-4 rounded-2xl text-sm font-semibold focus:outline-none">
+      <div class="field">
+        <label>Sync Token (secret)</label>
+        <input id="s-token" type="password" placeholder="Paste your secret token" />
+        <div class="muted text-xs mt-1">This stays only in your browser localStorage.</div>
       </div>
-      <div id="search-results" class="hidden flex flex-col gap-2 mb-6"></div>
 
-      <div id="log-list" class="flex flex-col gap-2"></div>
+      <button class="primaryBtn btn-press" onclick="Settings.save()">Save Settings</button>
+
+      <div class="divider"></div>
+
+      <button class="dangerWide btn-press" onclick="Data.resetAll()">Factory Reset (local)</button>
+      <div class="muted text-xs mt-2">
+        Reset clears browser data. It does not delete your Google Sheet.
+      </div>
+    </div>
+  </section>
+
+  <!-- SHEET: FOOD ADD -->
+  <section id="sheet-food" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker" id="sheet-mode">Add</div>
+        <div class="sheetTitle" id="sheet-name">Food</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
     </div>
 
-    <!-- TRENDS -->
-    <div id="view-trends" class="view">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-2xl font-black">Trends</h2>
-        <div class="flex gap-2">
-          <span class="pill"><i class="ph-fill ph-gauge"></i><span id="trend-label">Daily</span></span>
+    <div class="qtyRow mt-4">
+      <button class="qtyBtn btn-press" onclick="Sheet.adj(-0.5)">−</button>
+      <div class="qtyVal" id="sheet-qty">1.0</div>
+      <button class="qtyBtn btn-press" onclick="Sheet.adj(0.5)">+</button>
+    </div>
+
+    <div class="mt-4 bigKcal" id="sheet-total">0 kcal</div>
+
+    <div class="mt-4 grid grid-cols-2 gap-2">
+      <button class="actionBtn btn-press" onclick="Sheet.toggleFav()"><i class="ph-bold ph-star"></i> <span id="sheet-fav">Save</span></button>
+      <button class="primaryBtn btn-press" onclick="Sheet.saveToDay()">Save to Day</button>
+    </div>
+
+    <button class="dangerWide btn-press mt-3 hidden" id="sheet-delete" onclick="Sheet.deleteLog()">Delete Log</button>
+  </section>
+
+  <!-- SHEET: CREATE CUSTOM FOOD -->
+  <section id="sheet-foodCreate" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker">Custom</div>
+        <div class="sheetTitle">Create food</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <div class="field"><label>Name</label><input id="c-name" placeholder="e.g., Homemade Upma" /></div>
+      <div class="field"><label>Serving Unit</label><input id="c-unit" placeholder="e.g., 1 bowl" /></div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="field"><label>Calories</label><input id="c-kcal" type="number" placeholder="250" /></div>
+        <div class="field"><label>Protein (g)</label><input id="c-pro" type="number" placeholder="10" /></div>
+        <div class="field"><label>Carbs (g)</label><input id="c-carb" type="number" placeholder="40" /></div>
+        <div class="field"><label>Fat (g)</label><input id="c-fat" type="number" placeholder="8" /></div>
+      </div>
+
+      <button class="primaryBtn btn-press" onclick="Foods.createCustom()">Save Custom Food</button>
+    </div>
+  </section>
+
+  <!-- SHEET: EXERCISE -->
+  <section id="sheet-exercise" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker">Active</div>
+        <div class="sheetTitle">Add burn</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 grid grid-cols-2 gap-2">
+      <button class="card mini btn-press" onclick="Data.addBurn('Cricket', 450)">🏏 Cricket <span class="muted text-xs block">+450</span></button>
+      <button class="card mini btn-press" onclick="Data.addBurn('Gym', 300)">🏋️ Gym <span class="muted text-xs block">+300</span></button>
+      <button class="card mini btn-press" onclick="Data.addBurn('Walk', 200)">🚶 Walk <span class="muted text-xs block">+200</span></button>
+      <button class="card mini btn-press" onclick="Data.addBurn('Run', 400)">🏃 Run <span class="muted text-xs block">+400</span></button>
+    </div>
+  </section>
+
+  <!-- SHEET: WEIGHT -->
+  <section id="sheet-weight" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker">Weight</div>
+        <div class="sheetTitle">Log weight</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <div class="field"><label>Weight (kg)</label><input id="w-val" type="number" step="0.1" placeholder="e.g., 80.0" /></div>
+      <button class="primaryBtn btn-press" onclick="Data.saveWeight()">Save Weight</button>
+    </div>
+  </section>
+
+  <!-- SHEET: EDIT HISTORY DAY (water/burn) -->
+  <section id="sheet-historyDayEdit" class="sheet">
+    <div class="sheetHead">
+      <div>
+        <div class="kicker">History</div>
+        <div class="sheetTitle">Edit Day</div>
+      </div>
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <div class="field">
+        <label>Date</label>
+        <input id="hd-date" disabled />
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="field">
+          <label>Water steps (0.25L each)</label>
+          <input id="hd-water" type="number" />
+        </div>
+        <div class="field">
+          <label>Burn (kcal)</label>
+          <input id="hd-burn" type="number" />
         </div>
       </div>
 
-      <div class="bg-[#121212] p-1 rounded-2xl flex border border-zinc-800 mb-4">
-        <button id="btn-trend-day" class="segbtn bg-zinc-800 text-white" onclick="Trends.setMode('day')">Day</button>
-        <button id="btn-trend-week" class="segbtn text-zinc-400" onclick="Trends.setMode('week')">Week</button>
-        <button id="btn-trend-month" class="segbtn text-zinc-400" onclick="Trends.setMode('month')">Month</button>
-      </div>
-
-      <div class="glass-card p-5 mb-4">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-black text-zinc-200 flex items-center gap-2"><i class="ph-fill ph-chart-line-up text-emerald-400"></i> Net kcal</div>
-          <div class="text-xs text-zinc-500 font-black" id="trend-sub">Last 14 days</div>
-        </div>
-        <div class="h-48"><canvas id="chart-net"></canvas></div>
-      </div>
-
-      <div class="glass-card p-5 mb-4">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-black text-zinc-200 flex items-center gap-2"><i class="ph-fill ph-weight text-blue-400"></i> Weight</div>
-          <div class="text-xs text-zinc-500 font-black">Latest</div>
-        </div>
-        <div class="h-40"><canvas id="chart-weight"></canvas></div>
-      </div>
-
-      <div class="glass-card p-6 text-center">
-        <div class="text-xs font-black text-zinc-500 uppercase mb-2">Projected Date to 72kg</div>
-        <div class="text-3xl font-black text-blue-500" id="eta-date">Log 2+ Weights</div>
-      </div>
+      <button class="primaryBtn btn-press" onclick="History.saveDayEdits()">Save Day</button>
+      <button class="dangerWide btn-press" onclick="History.deleteDay()">Delete This Day</button>
     </div>
+  </section>
 
-    <!-- HISTORY -->
-    <div id="view-calendar" class="view">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-black">History</h2>
-        <button class="pill btn-press" onclick="UI.open('quickweight')"><i class="ph-fill ph-plus-circle"></i> Add Weight</button>
-      </div>
-      <div class="glass-card p-5">
-        <div id="calendar-body" class="grid grid-cols-7 gap-2"></div>
-        <div class="text-[10px] text-zinc-500 mt-4 font-bold">Tap any day to edit (water, burn, logs).</div>
-      </div>
-    </div>
-
-    <!-- LIBRARY -->
-    <div id="view-library" class="view">
-      <h2 class="text-2xl font-black mb-6">Saved Foods</h2>
-      <div id="library-list" class="space-y-2"></div>
-    </div>
-
-  </div>
-
-  <nav id="nav-bar">
-    <button class="nav-btn active" onclick="UI.nav(0, this, 'view-home')"><i class="ph-fill ph-house text-2xl"></i><span>Home</span></button>
-    <button class="nav-btn" onclick="UI.nav(1, this, 'view-trends')"><i class="ph-fill ph-chart-line-up text-2xl"></i><span>Trends</span></button>
-    <button class="nav-btn" onclick="UI.nav(2, this, 'view-calendar')"><i class="ph-fill ph-calendar text-2xl"></i><span>History</span></button>
-    <button class="nav-btn" onclick="UI.nav(3, this, 'view-library')"><i class="ph-fill ph-books text-2xl"></i><span>Library</span></button>
-  </nav>
-
-  <div id="backdrop" class="sheet-backdrop" onclick="UI.closeAll()"></div>
-
-  <!-- FOOD SHEET -->
-  <div id="sheet-food" class="sheet">
-    <div id="sheet-name" class="text-2xl font-black mb-6">Food</div>
-    <div class="bg-zinc-900 rounded-3xl p-2 flex items-center justify-between mb-8 border border-zinc-800">
-      <button onclick="Sheet.adj(-0.5)" class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl font-black">−</button>
-      <div class="text-3xl font-black tabular-nums" id="sheet-qty">1.0</div>
-      <button onclick="Sheet.adj(0.5)" class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl font-black">+</button>
-    </div>
-    <div id="sheet-total" class="text-center text-5xl font-black text-blue-500 mb-8">0 kcal</div>
-    <button onclick="Sheet.save()" class="w-full py-5 bg-white text-black font-black rounded-3xl uppercase tracking-widest text-sm btn-press">Save to Day</button>
-  </div>
-
-  <!-- SETTINGS SHEET -->
-  <div id="sheet-settings" class="sheet">
-    <h3 class="text-xl font-black mb-2">Cloud Sync (Secure)</h3>
-    <div class="text-xs text-zinc-500 font-bold mb-6">Tip: Use a long secret key (20+ chars). Keep it private.</div>
-
-    <label class="text-xs font-black text-zinc-500">Google Web App URL</label>
-    <input id="s-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="mb-4">
-
-    <label class="text-xs font-black text-zinc-500">Secret Key</label>
-    <input id="s-key" type="password" placeholder="Your SECRET_KEY" class="mb-4">
-
-    <label class="text-xs font-black text-zinc-500">Device ID (optional)</label>
-    <input id="s-device" type="text" placeholder="auto-generated if empty" class="mb-4">
-
-    <div class="grid grid-cols-2 gap-3 mb-4">
+  <!-- SHEET: EDIT HISTORY LOG (kcal/macros/qty) -->
+  <section id="sheet-historyLogEdit" class="sheet">
+    <div class="sheetHead">
       <div>
-        <label class="text-xs font-black text-zinc-500">Daily Cal Goal</label>
-        <input id="s-cal" type="number" placeholder="1650">
+        <div class="kicker">History</div>
+        <div class="sheetTitle">Edit Log</div>
       </div>
-      <div>
-        <label class="text-xs font-black text-zinc-500">Protein Target (g)</label>
-        <input id="s-pro" type="number" placeholder="130">
+      <button class="iconBtn btn-press" onclick="UI.closeAllSheets()"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <div class="field"><label>Name</label><input id="hl-name" /></div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="field"><label>Qty</label><input id="hl-qty" type="number" step="0.25" /></div>
+        <div class="field"><label>Calories</label><input id="hl-kcal" type="number" /></div>
+        <div class="field"><label>Protein</label><input id="hl-pro" type="number" /></div>
+        <div class="field"><label>Carbs</label><input id="hl-carb" type="number" /></div>
+        <div class="field"><label>Fat</label><input id="hl-fat" type="number" /></div>
       </div>
+      <button class="primaryBtn btn-press" onclick="History.saveLogEdits()">Save Log</button>
+      <button class="dangerWide btn-press" onclick="History.deleteLog()">Delete Log</button>
     </div>
+  </section>
 
-    <div class="grid grid-cols-2 gap-3 mb-6">
-      <div>
-        <label class="text-xs font-black text-zinc-500">Carb Target (g)</label>
-        <input id="s-carb" type="number" placeholder="170">
-      </div>
-      <div>
-        <label class="text-xs font-black text-zinc-500">Fat Target (g)</label>
-        <input id="s-fat" type="number" placeholder="55">
-      </div>
-    </div>
-
-    <button onclick="Data.saveSettings()" class="w-full py-4 bg-blue-600 text-white font-black rounded-2xl btn-press">Update Profile</button>
-
-    <div class="grid grid-cols-2 gap-3 mt-4">
-      <button onclick="Cloud.pullLatest()" class="w-full py-4 bg-zinc-800 text-white font-black rounded-2xl btn-press"><i class="ph-bold ph-cloud-arrow-down"></i> Pull</button>
-      <button onclick="Cloud.push()" class="w-full py-4 bg-emerald-600 text-black font-black rounded-2xl btn-press"><i class="ph-bold ph-cloud-arrow-up"></i> Push</button>
-    </div>
-
-    <button onclick="Data.resetAll()" class="w-full py-4 mt-6 text-red-500 font-black text-xs uppercase tracking-widest">Wipe Local Data</button>
-  </div>
-
-  <!-- EXERCISE SHEET -->
-  <div id="sheet-exercise" class="sheet">
-    <h3 class="text-xl font-black mb-6">Add Activity</h3>
-    <div class="grid grid-cols-2 gap-3">
-      <button onclick="Data.addExercise('Cricket', 450)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🏏 Cricket <span class="block text-xs text-zinc-500">+450</span></button>
-      <button onclick="Data.addExercise('Tennis', 350)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🎾 Tennis <span class="block text-xs text-zinc-500">+350</span></button>
-      <button onclick="Data.addExercise('Hiking', 500)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🥾 Hiking <span class="block text-xs text-zinc-500">+500</span></button>
-      <button onclick="Data.addExercise('Workout', 200)" class="glass-card p-4 text-left font-black text-emerald-400 btn-press">🏃 Workout <span class="block text-xs text-zinc-500">+200</span></button>
-    </div>
-  </div>
-
-  <!-- QUICK WEIGHT -->
-  <div id="sheet-quickweight" class="sheet">
-    <h3 class="text-xl font-black mb-4">Add Weight</h3>
-    <input id="quick-weight" type="number" step="0.1" placeholder="e.g., 78.4" class="mb-4">
-    <button onclick="Data.saveWeight()" class="w-full py-4 bg-white text-black font-black rounded-2xl btn-press">Save</button>
-  </div>
-
-  <!-- EDIT DAY SHEET -->
-  <div id="sheet-editday" class="sheet">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-xl font-black">Edit Day</h3>
-      <span class="pill"><i class="ph-fill ph-calendar"></i><span id="ed-date">----</span></span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3 mb-4">
-      <div>
-        <label class="text-xs font-black text-zinc-500">Water steps (×250ml)</label>
-        <input id="ed-water" type="number" min="0" step="1">
-      </div>
-      <div>
-        <label class="text-xs font-black text-zinc-500">Burn kcal</label>
-        <input id="ed-burn" type="number" min="0" step="10">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3 mb-6">
-      <button onclick="History.saveDayEdits()" class="py-4 bg-blue-600 text-white font-black rounded-2xl btn-press">Save Day</button>
-      <button onclick="History.deleteDay()" class="py-4 bg-zinc-900 border border-zinc-800 text-red-400 font-black rounded-2xl btn-press">Delete Day</button>
-    </div>
-
-    <div class="text-xs font-black text-zinc-500 uppercase mb-2">Logs</div>
-    <div id="ed-logs" class="space-y-2"></div>
-  </div>
-
+  <script src="./app.js"></script>
   <script>
-    /* ---------- Food DB ---------- */
-    var DB = [
-      {id:'egg',n:'Boiled Egg',u:'1 large',c:78,p:6,cb:0,f:5},
-      {id:'chick',n:'Chicken Breast',u:'150g',c:250,p:45,cb:0,f:6},
-      {id:'rice',n:'White Rice',u:'1 cup',c:205,p:4,cb:44,f:0},
-      {id:'roti',n:'Roti',u:'1 pc',c:70,p:3,cb:15,f:0},
-      {id:'dal',n:'Dal',u:'1 bowl',c:260,p:12,cb:30,f:10},
-      {id:'paneer',n:'Paneer',u:'100g',c:265,p:18,cb:1,f:20}
-    ];
-
-    /* ---------- Core App State ---------- */
-    var App = {
-      state: {
-        settings: { c:1650, pro:130, carb:170, fat:55, url:'', key:'', deviceId:'' },
-        meal: 'Breakfast',
-        custom: [],
-        days: {},           // { "YYYY-MM-DD": {logs:[], burn:0, water:0} }
-        weightHistory: {}   // { "YYYY-MM-DD": 78.4 }
-      },
-      init: function(){
-        var s = localStorage.getItem('m72_elite_secure_v1');
-        if (s) {
-          try { this.state = JSON.parse(s); } catch(e){}
-        }
-        // Ensure deviceId
-        if (!this.state.settings.deviceId) {
-          this.state.settings.deviceId = 'dev_' + Math.random().toString(16).slice(2) + '_' + Date.now();
-        }
-
-        // hydrate settings UI
-        document.getElementById('s-url').value = this.state.settings.url || '';
-        document.getElementById('s-key').value = this.state.settings.key || '';
-        document.getElementById('s-device').value = this.state.settings.deviceId || '';
-        document.getElementById('s-cal').value = this.state.settings.c || 1650;
-        document.getElementById('s-pro').value = this.state.settings.pro || 130;
-        document.getElementById('s-carb').value = this.state.settings.carb || 170;
-        document.getElementById('s-fat').value = this.state.settings.fat || 55;
-
-        this.setMeal(this.state.meal || 'Breakfast');
-        Trends.setMode(Trends.mode); // render default
-        Render.all();
-      },
-      save: function(){
-        localStorage.setItem('m72_elite_secure_v1', JSON.stringify(this.state));
-      },
-      setMeal: function(m){
-        this.state.meal = m;
-        var meals = ['Breakfast','Lunch','Snack','Dinner'];
-        for (var i=0;i<meals.length;i++){
-          var id = meals[i];
-          var el = document.getElementById('btn-'+id);
-          if (!el) continue;
-          if (id === m) {
-            el.classList.add('text-white','bg-zinc-800','rounded-xl');
-            el.classList.remove('text-zinc-500');
-          } else {
-            el.classList.remove('text-white','bg-zinc-800','rounded-xl');
-            el.classList.add('text-zinc-500');
-          }
-        }
-        Render.all();
-      },
-      todayKey: function(){
-        return new Date().toISOString().split('T')[0];
-      },
-      getDay: function(dateKey){
-        if (!this.state.days[dateKey]) this.state.days[dateKey] = { logs:[], burn:0, water:0 };
-        return this.state.days[dateKey];
-      },
-      getToday: function(){
-        return this.getDay(this.todayKey());
-      }
-    };
-
-    /* ---------- UI ---------- */
-    var UI = {
-      nav: function(idx, btn, viewId){
-        var navs = document.querySelectorAll('.nav-btn');
-        for (var i=0;i<navs.length;i++) navs[i].classList.remove('active');
-        btn.classList.add('active');
-
-        var views = document.querySelectorAll('.view');
-        for (var j=0;j<views.length;j++) views[j].classList.remove('active-view');
-        document.getElementById(viewId).classList.add('active-view');
-
-        if (idx === 1) Trends.renderAll();
-        if (idx === 2) History.renderCalendar();
-      },
-      open: function(id){
-        document.getElementById('backdrop').style.display='block';
-        document.getElementById('sheet-'+id).classList.add('open');
-      },
-      closeAll: function(){
-        document.getElementById('backdrop').style.display='none';
-        var sheets = document.querySelectorAll('.sheet');
-        for (var i=0;i<sheets.length;i++) sheets[i].classList.remove('open');
-      }
-    };
-
-    /* ---------- Render ---------- */
-    var Render = {
-      all: function(){
-        var day = App.getToday();
-        var eaten = 0;
-        for (var i=0;i<day.logs.length;i++) eaten += (Number(day.logs[i].c) || 0);
-        var net = eaten - (Number(day.burn) || 0);
-        var goal = Number(App.state.settings.c) || 1650;
-
-        document.getElementById('val-rem').innerText = Math.round(Math.max(0, goal - net));
-        document.getElementById('val-net').innerText = Math.round(net);
-        document.getElementById('val-burned').innerText = Math.round(day.burn || 0);
-        document.getElementById('val-water').innerText = ((day.water || 0) * 0.25).toFixed(1);
-
-        var pct = Math.min((net/goal)*100, 100);
-        if (!isFinite(pct)) pct = 0;
-        document.getElementById('val-pct').innerText = Math.round(pct) + '%';
-        document.getElementById('ring-progress').style.strokeDashoffset = 214 - (214 * pct / 100);
-
-        // macros
-        var m = {p:0,cb:0,f:0};
-        for (var k=0;k<day.logs.length;k++){
-          m.p += Number(day.logs[k].p)||0;
-          m.cb += Number(day.logs[k].cb)||0;
-          m.f += Number(day.logs[k].f)||0;
-        }
-
-        var tPro = Number(App.state.settings.pro)||130;
-        var tCarb = Number(App.state.settings.carb)||170;
-        var tFat = Number(App.state.settings.fat)||55;
-
-        setMacro_('pro', m.p, tPro);
-        setMacro_('carb', m.cb, tCarb);
-        setMacro_('fat', m.f, tFat);
-
-        // header weight
-        var whKeys = Object.keys(App.state.weightHistory).sort();
-        var w = whKeys.length ? App.state.weightHistory[whKeys[whKeys.length-1]] : "--";
-        document.getElementById('header-weight').innerText = w;
-
-        this.list();
-        Trends.predictETA();
-      },
-      list: function(){
-        var items = App.getToday().logs.filter(function(l){ return l.meal === App.state.meal; });
-        var out = '';
-        for (var i=0;i<items.length;i++){
-          var it = items[i];
-          out += ''
-            + '<div class="glass-card p-4 flex justify-between items-center">'
-            +   '<div>'
-            +     '<div class="text-white font-black text-sm">' + esc_(it.n) + ' <span class="text-zinc-500 font-semibold">× ' + esc_(String(it.qty||1)) + '</span></div>'
-            +     '<div class="text-[10px] text-zinc-500 mt-1 font-bold">P' + Math.round(it.p||0) + ' C' + Math.round(it.cb||0) + ' F' + Math.round(it.f||0) + '</div>'
-            +   '</div>'
-            +   '<span class="text-blue-400 font-black">' + Math.round(it.c||0) + '</span>'
-            + '</div>';
-        }
-        if (!out) out = '<div class="text-center py-6 text-zinc-700 text-[10px] border border-dashed border-zinc-800 rounded-2xl font-black">Empty</div>';
-        document.getElementById('log-list').innerHTML = out;
-      }
-    };
-
-    function setMacro_(key, curr, tgt){
-      var pct = tgt ? Math.min((curr/tgt)*100, 100) : 0;
-      if (!isFinite(pct)) pct = 0;
-      document.getElementById('curr-'+key).innerText = Math.round(curr);
-      document.getElementById('tgt-'+key).innerText = Math.round(tgt);
-      document.getElementById('pct-'+key).innerText = Math.round(pct);
-      document.getElementById('bar-'+key).style.width = pct + '%';
+    // Service worker for offline-first + installable PWA
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
     }
-
-    /* ---------- Foods ---------- */
-    var Foods = {
-      search: function(){
-        var q = (document.getElementById('search-input').value||'').toLowerCase();
-        var res = document.getElementById('search-results');
-        if (!q){ res.classList.add('hidden'); return; }
-        var pool = App.state.custom.concat(DB);
-        var hits = pool.filter(function(f){ return (f.n||'').toLowerCase().indexOf(q) !== -1; }).slice(0,5);
-        res.classList.remove('hidden');
-        var html = '';
-        for (var i=0;i<hits.length;i++){
-          var f = hits[i];
-          html += '<div onclick="Sheet.openAdd(\'' + escAttr_(f.id) + '\')" class="bg-zinc-900 p-3 rounded-xl flex justify-between items-center border border-zinc-800 btn-press">'
-               +    '<div class="text-white text-sm font-black">' + esc_(f.n) + '</div>'
-               +    '<div class="text-zinc-500 text-xs font-black">' + Math.round(f.c) + ' kcal</div>'
-               + '</div>';
-        }
-        res.innerHTML = html;
-      }
-    };
-
-    /* ---------- Sheet: Food Add ---------- */
-    var Sheet = {
-      curr: null, qty: 1,
-      openAdd: function(fid){
-        var pool = App.state.custom.concat(DB);
-        this.curr = pool.find(function(x){ return x.id === fid; }) || null;
-        if (!this.curr) return;
-        this.qty = 1;
-        this.render();
-        UI.open('food');
-      },
-      render: function(){
-        document.getElementById('sheet-name').innerText = this.curr.n;
-        document.getElementById('sheet-qty').innerText = this.qty.toFixed(1);
-        document.getElementById('sheet-total').innerText = Math.round(this.curr.c * this.qty) + ' kcal';
-      },
-      adj: function(d){
-        this.qty = Math.max(0.5, this.qty + d);
-        this.render();
-      },
-      save: function(){
-        var base = this.curr;
-        var log = {
-          id: Date.now(),
-          foodId: base.id,
-          n: base.n,
-          u: base.u,
-          qty: this.qty,
-          c: base.c * this.qty,
-          p: (base.p||0) * this.qty,
-          cb: (base.cb||0) * this.qty,
-          f: (base.f||0) * this.qty,
-          meal: App.state.meal,
-          ts: new Date().toISOString()
-        };
-        App.getToday().logs.unshift(log);
-        App.save();
-        Render.all();
-        UI.closeAll();
-      }
-    };
-
-    /* ---------- Data actions ---------- */
-    var Data = {
-      addWater: function(){
-        App.getToday().water = (App.getToday().water||0) + 1;
-        App.save(); Render.all();
-      },
-      addExercise: function(name, kcal){
-        App.getToday().burn = (App.getToday().burn||0) + (Number(kcal)||0);
-        App.save(); Render.all(); UI.closeAll();
-      },
-      saveWeight: function(){
-        var v = parseFloat(document.getElementById('quick-weight').value);
-        if (!isFinite(v)) return;
-        App.state.weightHistory[App.todayKey()] = v;
-        App.save(); Render.all(); UI.closeAll();
-      },
-      saveSettings: function(){
-        App.state.settings.url = (document.getElementById('s-url').value||'').trim();
-        App.state.settings.key = (document.getElementById('s-key').value||'').trim();
-        var dev = (document.getElementById('s-device').value||'').trim();
-        if (dev) App.state.settings.deviceId = dev;
-        if (!App.state.settings.deviceId) App.state.settings.deviceId = 'dev_' + Math.random().toString(16).slice(2) + '_' + Date.now();
-
-        var c = parseInt(document.getElementById('s-cal').value, 10);
-        var pro = parseInt(document.getElementById('s-pro').value, 10);
-        var carb = parseInt(document.getElementById('s-carb').value, 10);
-        var fat = parseInt(document.getElementById('s-fat').value, 10);
-
-        App.state.settings.c = isFinite(c) ? c : 1650;
-        App.state.settings.pro = isFinite(pro) ? pro : 130;
-        App.state.settings.carb = isFinite(carb) ? carb : 170;
-        App.state.settings.fat = isFinite(fat) ? fat : 55;
-
-        App.save(); Render.all(); UI.closeAll();
-      },
-      resetAll: function(){
-        localStorage.removeItem('m72_elite_secure_v1');
-        location.reload();
-      }
-    };
-
-    /* ---------- History (edit) ---------- */
-    var History = {
-      editingDate: null,
-      renderCalendar: function(){
-        var body = document.getElementById('calendar-body');
-        body.innerHTML = '';
-        var keys = Object.keys(App.state.days).sort().reverse();
-        if (!keys.length){
-          body.innerHTML = '<div class="col-span-7 text-center text-zinc-700 font-black text-sm py-10">No days logged yet.</div>';
-          return;
-        }
-        for (var i=0;i<keys.length;i++){
-          var date = keys[i];
-          var day = App.state.days[date];
-          var kcal = 0;
-          for (var j=0;j<(day.logs||[]).length;j++) kcal += Number(day.logs[j].c)||0;
-          kcal -= Number(day.burn)||0;
-
-          var goal = Number(App.state.settings.c)||1650;
-          var bad = kcal > goal*1.1;
-          var cls = bad ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/20';
-
-          body.innerHTML += ''
-            + '<button class="aspect-square rounded-xl flex items-center justify-center text-xs font-black ' + cls + ' btn-press"'
-            + ' onclick="History.openEdit(\'' + escAttr_(date) + '\')">'
-            +   date.split('-')[2]
-            + '</button>';
-        }
-      },
-      openEdit: function(date){
-        this.editingDate = date;
-        var day = App.getDay(date);
-        document.getElementById('ed-date').innerText = date;
-        document.getElementById('ed-water').value = day.water || 0;
-        document.getElementById('ed-burn').value = day.burn || 0;
-
-        // logs list
-        var html = '';
-        var logs = day.logs || [];
-        if (!logs.length){
-          html = '<div class="text-center py-6 text-zinc-700 text-[10px] border border-dashed border-zinc-800 rounded-2xl font-black">No logs</div>';
-        } else {
-          for (var i=0;i<logs.length;i++){
-            var l = logs[i];
-            html += ''
-              + '<div class="glass-card p-4 flex justify-between items-center">'
-              +   '<div>'
-              +     '<div class="text-white font-black text-sm">' + esc_(l.n) + ' <span class="text-zinc-500 font-semibold">× ' + esc_(String(l.qty||1)) + '</span></div>'
-              +     '<div class="text-[10px] text-zinc-500 mt-1 font-bold">' + esc_(l.meal||'') + ' • ' + Math.round(l.c||0) + ' kcal</div>'
-              +   '</div>'
-              +   '<button class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-red-400 btn-press flex items-center justify-center" onclick="History.deleteLog(' + i + ')"><i class="ph-bold ph-trash"></i></button>'
-              + '</div>';
-          }
-        }
-        document.getElementById('ed-logs').innerHTML = html;
-
-        UI.open('editday');
-      },
-      saveDayEdits: function(){
-        if (!this.editingDate) return;
-        var d = App.getDay(this.editingDate);
-        var w = parseInt(document.getElementById('ed-water').value,10);
-        var b = parseInt(document.getElementById('ed-burn').value,10);
-        d.water = isFinite(w) ? w : 0;
-        d.burn = isFinite(b) ? b : 0;
-        App.save();
-        Render.all();
-        this.renderCalendar();
-        UI.closeAll();
-      },
-      deleteLog: function(idx){
-        if (!this.editingDate) return;
-        var d = App.getDay(this.editingDate);
-        d.logs.splice(idx,1);
-        App.save();
-        Render.all();
-        this.openEdit(this.editingDate);
-      },
-      deleteDay: function(){
-        if (!this.editingDate) return;
-        delete App.state.days[this.editingDate];
-        App.save();
-        Render.all();
-        this.renderCalendar();
-        UI.closeAll();
-      }
-    };
-
-    /* ---------- Trends ---------- */
-    var Trends = {
-      mode: 'day', // day | week | month
-      setMode: function(m){
-        this.mode = m;
-
-        var map = {day:'Daily',week:'Weekly',month:'Monthly'};
-        document.getElementById('trend-label').innerText = map[m] || 'Daily';
-
-        // button styling
-        var ids = ['day','week','month'];
-        for (var i=0;i<ids.length;i++){
-          var id = ids[i];
-          var b = document.getElementById('btn-trend-'+id);
-          if (!b) continue;
-          if (id === m){
-            b.classList.add('bg-zinc-800','text-white');
-            b.classList.remove('text-zinc-400');
-          } else {
-            b.classList.remove('bg-zinc-800','text-white');
-            b.classList.add('text-zinc-400');
-          }
-        }
-        this.renderAll();
-      },
-      renderAll: function(){
-        this.renderNetChart();
-        this.renderWeightChart();
-        this.predictETA();
-      },
-      renderNetChart: function(){
-        var points = this.getNetSeries_();
-        var labels = points.map(function(p){ return p.label; });
-        var data = points.map(function(p){ return p.net; });
-
-        if (window.netChart) window.netChart.destroy();
-        window.netChart = new Chart(document.getElementById('chart-net'), {
-          type: 'line',
-          data: { labels: labels, datasets: [{ label:'Net', data: data, tension:0.35, borderColor:'#22c55e' }]},
-          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}, scales:{ x:{ display:false }, y:{ display:false } } }
-        });
-      },
-      renderWeightChart: function(){
-        var dates = Object.keys(App.state.weightHistory).sort();
-        var weightData = dates.map(function(k){ return App.state.weightHistory[k]; });
-        var labels = dates.map(function(d){ return d.slice(5); });
-
-        if (window.wChart) window.wChart.destroy();
-        window.wChart = new Chart(document.getElementById('chart-weight'), {
-          type:'line',
-          data:{ labels: labels, datasets:[{ label:'Weight', data: weightData, tension:0.35, borderColor:'#3b82f6' }]},
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}, scales:{ x:{ display:false }, y:{ display:false } } }
-        });
-      },
-      predictETA: function(){
-        var weights = Object.keys(App.state.weightHistory).sort().map(function(k){ return App.state.weightHistory[k]; });
-        if (weights.length < 2){
-          document.getElementById('eta-date').innerText = "Log 2+ Weights";
-          return;
-        }
-        var diff = weights[0] - weights[weights.length-1];
-        var velocity = diff / weights.length; // kg/day approx
-        if (velocity <= 0){
-          document.getElementById('eta-date').innerText = "Steady State";
-          return;
-        }
-        var current = weights[weights.length-1];
-        var days = Math.ceil((current - 72) / velocity);
-        if (!isFinite(days) || days < 0){
-          document.getElementById('eta-date').innerText = "Steady State";
-          return;
-        }
-        var d = new Date();
-        d.setDate(d.getDate() + days);
-        document.getElementById('eta-date').innerText = d.toLocaleDateString([], {month:'short', day:'numeric'});
-      },
-      getNetSeries_: function(){
-        // Build daily net series from days
-        var keys = Object.keys(App.state.days).sort(); // ascending
-        var daily = [];
-        for (var i=0;i<keys.length;i++){
-          var date = keys[i];
-          var day = App.state.days[date];
-          var eaten = 0;
-          for (var j=0;j<(day.logs||[]).length;j++) eaten += Number(day.logs[j].c)||0;
-          var net = eaten - (Number(day.burn)||0);
-          daily.push({ date: date, net: Math.round(net) });
-        }
-
-        if (this.mode === 'day'){
-          var last = daily.slice(Math.max(0, daily.length-14));
-          document.getElementById('trend-sub').innerText = 'Last ' + (last.length||0) + ' days';
-          return last.map(function(p){ return { label: p.date.slice(5), net: p.net }; });
-        }
-
-        if (this.mode === 'week'){
-          // group by ISO week-ish: use Monday-based week start
-          var buckets = {};
-          for (var k=0;k<daily.length;k++){
-            var dt = new Date(daily[k].date + 'T00:00:00Z');
-            // shift to Monday
-            var day = dt.getUTCDay(); // 0=Sun
-            var diff = (day === 0 ? -6 : 1 - day);
-            dt.setUTCDate(dt.getUTCDate() + diff);
-            var wk = dt.toISOString().slice(0,10); // week start
-            if (!buckets[wk]) buckets[wk] = { sum:0, n:0 };
-            buckets[wk].sum += daily[k].net;
-            buckets[wk].n += 1;
-          }
-          var wkeys = Object.keys(buckets).sort();
-          var series = wkeys.map(function(wk){
-            return { label: wk.slice(5), net: Math.round(buckets[wk].sum / buckets[wk].n) };
-          });
-          series = series.slice(Math.max(0, series.length-12));
-          document.getElementById('trend-sub').innerText = 'Last ' + series.length + ' weeks (avg/day net)';
-          return series;
-        }
-
-        // month
-        var mb = {};
-        for (var z=0;z<daily.length;z++){
-          var m = daily[z].date.slice(0,7); // YYYY-MM
-          if (!mb[m]) mb[m] = { sum:0, n:0 };
-          mb[m].sum += daily[z].net;
-          mb[m].n += 1;
-        }
-        var mkeys = Object.keys(mb).sort();
-        var ms = mkeys.map(function(mm){
-          return { label: mm.slice(5), net: Math.round(mb[mm].sum / mb[mm].n) };
-        });
-        ms = ms.slice(Math.max(0, ms.length-12));
-        document.getElementById('trend-sub').innerText = 'Last ' + ms.length + ' months (avg/day net)';
-        return ms;
-      }
-    };
-
-    /* ---------- Secure Cloud Sync ---------- */
-    var Cloud = {
-      // canonical string: method|path|deviceId|ts|nonce|sha256(body)
-      push: async function(){
-        var url = (App.state.settings.url||'').trim();
-        var key = (App.state.settings.key||'').trim();
-        var deviceId = (App.state.settings.deviceId||'').trim();
-        if (!url || !key) return alert("Set Web App URL + Secret Key in Settings.");
-        if (!deviceId) return alert("Missing deviceId");
-
-        var btn = document.getElementById('sync-btn');
-        btn.querySelector('i').classList.add('sync-spin');
-
-        try {
-          var ts = Date.now();
-          var nonce = Crypto.randNonce();
-          var data = App.state; // full state
-          var bodyObj = { deviceId: deviceId, ts: ts, nonce: nonce, data: data };
-          var bodyJson = JSON.stringify(bodyObj);
-
-          var bodyHash = await Crypto.sha256Hex(bodyJson);
-          var sigBase = "POST|/sync|" + deviceId + "|" + ts + "|" + nonce + "|" + bodyHash;
-          var sig = await Crypto.hmacHex(key, sigBase);
-
-          var payload = {
-            deviceId: deviceId,
-            ts: ts,
-            nonce: nonce,
-            sig: sig,
-            data: data
-          };
-
-          var resp = await fetch(url + "?action=sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          var j = await resp.json().catch(function(){ return null; });
-          if (!j || !j.ok) throw new Error((j && j.error) ? j.error : ("HTTP " + resp.status));
-
-          alert("Cloud push ✅");
-        } catch (e) {
-          alert("Sync failed: " + e.message);
-        } finally {
-          btn.querySelector('i').classList.remove('sync-spin');
-        }
-      },
-
-      pullLatest: async function(){
-        var url = (App.state.settings.url||'').trim();
-        var key = (App.state.settings.key||'').trim();
-        var deviceId = (App.state.settings.deviceId||'').trim();
-        if (!url || !key) return alert("Set Web App URL + Secret Key in Settings.");
-        if (!deviceId) return alert("Missing deviceId");
-
-        var btn = document.getElementById('pull-btn');
-        btn.querySelector('i').classList.add('sync-spin');
-
-        try {
-          var ts = Date.now();
-          var nonce = Crypto.randNonce();
-          var sigBase = "GET|/state|" + deviceId + "|" + ts + "|" + nonce + "|";
-          var sig = await Crypto.hmacHex(key, sigBase);
-
-          var qs = "action=state&deviceId=" + encodeURIComponent(deviceId) +
-                   "&ts=" + encodeURIComponent(ts) +
-                   "&nonce=" + encodeURIComponent(nonce) +
-                   "&sig=" + encodeURIComponent(sig);
-
-          var resp = await fetch(url + "?" + qs, { method: "GET" });
-          var j = await resp.json().catch(function(){ return null; });
-          if (!j || !j.ok) throw new Error((j && j.error) ? j.error : ("HTTP " + resp.status));
-
-          if (!j.data) return alert("No cloud state found yet.");
-
-          // Preserve local URL/key/deviceId, but replace rest
-          var keep = App.state.settings;
-          App.state = j.data;
-          App.state.settings.url = keep.url;
-          App.state.settings.key = keep.key;
-          App.state.settings.deviceId = keep.deviceId;
-
-          App.save();
-          Render.all();
-          History.renderCalendar();
-          Trends.renderAll();
-          alert("Cloud pull ✅");
-        } catch (e) {
-          alert("Pull failed: " + e.message);
-        } finally {
-          btn.querySelector('i').classList.remove('sync-spin');
-        }
-      }
-    };
-
-    /* ---------- Crypto helpers (Web Crypto) ---------- */
-    var Crypto = {
-      te: new TextEncoder(),
-      randNonce: function(){
-        var a = new Uint8Array(16);
-        crypto.getRandomValues(a);
-        var s = '';
-        for (var i=0;i<a.length;i++){
-          s += ('0' + a[i].toString(16)).slice(-2);
-        }
-        return s;
-      },
-      sha256Hex: async function(str){
-        var buf = await crypto.subtle.digest('SHA-256', this.te.encode(str));
-        return this.bufToHex(buf);
-      },
-      hmacHex: async function(secret, msg){
-        var key = await crypto.subtle.importKey(
-          'raw',
-          this.te.encode(secret),
-          { name:'HMAC', hash:'SHA-256' },
-          false,
-          ['sign']
-        );
-        var sig = await crypto.subtle.sign('HMAC', key, this.te.encode(msg));
-        return this.bufToHex(sig);
-      },
-      bufToHex: function(buf){
-        var bytes = new Uint8Array(buf);
-        var hex = '';
-        for (var i=0;i<bytes.length;i++) hex += ('0' + bytes[i].toString(16)).slice(-2);
-        return hex;
-      }
-    };
-
-    function esc_(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
-    function escAttr_(s){ return String(s||'').replace(/'/g,"&#39;"); }
-
-    // boot
-    App.init();
   </script>
 </body>
 </html>
