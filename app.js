@@ -1,1025 +1,653 @@
-/***********************
- * Mission 72 Elite (frontend)
- * Offline-first + secure sync + editable history + trends toggle + PWA
- ************************/
+/* =========================
+   Mission 72 Elite - app.js
+   Fixes:
+   - Local date keys (no UTC ISO bug)
+   - Selectable day (edit old days)
+   - Home date slider + swipe
+   - Calendar highlights today + selected day
+   ========================= */
 
-const STORAGE_KEY = "m72_elite_v2";
+/* ---------- Utilities ---------- */
+function localISODate_(d) {
+  // returns YYYY-MM-DD in LOCAL time (prevents UTC date flip)
+  const dt = d ? new Date(d) : new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
-/** Default DB foods (expand anytime) */
-const FOOD_DB = [
-  { id:"egg", n:"Boiled Egg", u:"1 large", c:78,  p:6,  cb:0.6, f:5 },
-  { id:"chick", n:"Chicken Breast", u:"150g", c:250, p:45, cb:0,   f:6 },
-  { id:"rice", n:"White Rice", u:"1 cup", c:205, p:4,  cb:44,  f:0.4 },
-  { id:"roti", n:"Roti / Chapati", u:"1 pc", c:70,  p:3,  cb:15,  f:0.5 },
-  { id:"dal", n:"Dal", u:"1 bowl", c:260, p:12, cb:30, f:10 },
-  { id:"paneer", n:"Paneer", u:"100g", c:265, p:18, cb:1, f:20 },
-  { id:"banana", n:"Banana", u:"1 medium", c:105, p:1.3, cb:27, f:0.4 },
-  { id:"yogurt", n:"Greek Yogurt", u:"1 cup", c:130, p:12, cb:8, f:0 },
+function addDays_(iso, delta) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  return localISODate_(dt);
+}
+
+function prettyDate_(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function clamp_(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function uid_() {
+  return "c_" + Math.random().toString(36).slice(2, 9) + "_" + Date.now();
+}
+
+function escapeHtml_(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* ---------- Built-in DB ---------- */
+const DB = [
+  { id: "egg", n: "Boiled Egg", u: "1 large", c: 78, p: 6, cb: 0, f: 5 },
+  { id: "chick", n: "Chicken Breast", u: "150g", c: 250, p: 45, cb: 0, f: 6 },
+  { id: "rice", n: "White Rice", u: "1 cup", c: 205, p: 4, cb: 44, f: 0 },
+  { id: "roti", n: "Roti", u: "1 pc", c: 70, p: 3, cb: 15, f: 0 },
+  { id: "dal", n: "Dal", u: "1 bowl", c: 260, p: 12, cb: 30, f: 10 },
+  { id: "paneer", n: "Paneer", u: "100g", c: 265, p: 18, cb: 1, f: 20 }
 ];
 
-function todayKey(){
-  return new Date().toISOString().slice(0,10);
-}
-function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
-function nnum(x){ const v = Number(x); return Number.isFinite(v) ? v : 0; }
-function round0(x){ return Math.round(nnum(x)); }
-function round1(x){ return Math.round(nnum(x)*10)/10; }
-function uid(){ return (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2)); }
-
+/* ---------- App State ---------- */
 const App = {
-  state: null,
-  init(){
-    const raw = localStorage.getItem(STORAGE_KEY);
-    this.state = raw ? this.migrate(JSON.parse(raw)) : this.defaultState();
+  key: "m72_enterprise_vfinal",
+  state: {
+    settings: { c: 1650, url: "" },
+    meal: "Breakfast",
+    custom: [],
+    days: {},           // { "YYYY-MM-DD": { logs:[], burn:0, water:0 } }
+    weightHistory: {},  // { "YYYY-MM-DD": 80.2 }
+    selectedDate: null  // active day on Home/History
+  },
 
-    // Ensure today
-    const t = todayKey();
-    this.state.days[t] ||= { logs: [], burn: 0, water: 0 };
+  init() {
+    const raw = localStorage.getItem(this.key);
+    if (raw) {
+      try { this.state = JSON.parse(raw); } catch (e) {}
+    }
+    // Ensure selectedDate exists and is LOCAL today by default
+    const today = localISODate_();
+    if (!this.state.selectedDate) this.state.selectedDate = today;
 
-    // UI
-    this.setMeal(this.state.meal || "Breakfast");
-    Settings.render();
-    Trends.init();
+    // Ensure structure
+    this.getDay(this.state.selectedDate);
 
+    this.setMeal(this.state.meal || "Breakfast", true);
     Render.all();
-    History.renderDays();
+    UI.attachHomeSwipe();
+  },
 
-    // swipe navigation (Home<->Trends<->History<->Library)
-    UI.enableSwipeNav();
+  save() {
+    localStorage.setItem(this.key, JSON.stringify(this.state));
+  },
 
-    // initial nav
-    UI.nav(this.state.ui?.view || "home", null, true);
-  },
-  defaultState(){
-    return {
-      v:2,
-      meal:"Breakfast",
-      settings:{
-        goal:1650,
-        pro:130,
-        carb:170,
-        fat:55,
-        url:"",
-        token:""
-      },
-      favorites:[],      // food ids
-      customFoods:[],    // custom foods
-      days:{},           // by date
-      weightHistory:{},  // date -> weight
-      ui:{ view:"home", trendMode:"day" }
-    };
-  },
-  migrate(s){
-    const d = this.defaultState();
-    s ||= d;
-    s.v ||= 2;
-    s.settings ||= d.settings;
-    s.settings.goal = nnum(s.settings.goal || s.settings.c || 1650);
-    s.settings.pro = nnum(s.settings.pro || 130);
-    s.settings.carb = nnum(s.settings.carb || 170);
-    s.settings.fat = nnum(s.settings.fat || 55);
-    s.settings.url ||= "";
-    s.settings.token ||= "";
-    s.favorites ||= [];
-    s.customFoods ||= [];
-    s.days ||= {};
-    s.weightHistory ||= {};
-    s.ui ||= d.ui;
-    s.ui.view ||= "home";
-    s.ui.trendMode ||= "day";
-    s.meal ||= "Breakfast";
-    return s;
-  },
-  save(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-  },
-  getToday(){
-    const t = todayKey();
-    this.state.days[t] ||= { logs: [], burn: 0, water: 0 };
-    return this.state.days[t];
-  },
-  setMeal(meal){
-    this.state.meal = meal;
-    this.save();
+  setMeal(m, silent) {
+    this.state.meal = m;
 
-    ["Breakfast","Lunch","Snack","Dinner"].forEach(m=>{
-      const btn = document.getElementById("btn-"+m);
-      if(!btn) return;
-      btn.classList.toggle("active", m===meal);
+    ["Breakfast", "Lunch", "Snack", "Dinner"].forEach((id) => {
+      const el = document.getElementById("btn-" + id);
+      if (!el) return;
+      if (id === m) {
+        el.classList.add("text-white", "bg-zinc-800", "rounded-xl");
+        el.classList.remove("text-zinc-500");
+      } else {
+        el.classList.remove("text-white", "bg-zinc-800", "rounded-xl");
+        el.classList.add("text-zinc-500");
+      }
     });
 
-    const title = document.getElementById("logMealTitle");
-    if(title) title.textContent = meal;
+    if (!silent) {
+      this.save();
+      Render.all();
+    }
+  },
 
-    Render.listToday();
+  setSelectedDate(iso) {
+    this.state.selectedDate = iso;
+    this.getDay(iso);
+    this.save();
+    Render.all();
+  },
+
+  getDay(iso) {
+    const k = iso || localISODate_();
+    if (!this.state.days[k]) this.state.days[k] = { logs: [], burn: 0, water: 0 };
+    // Ensure defaults
+    this.state.days[k].logs ||= [];
+    this.state.days[k].burn ||= 0;
+    this.state.days[k].water ||= 0;
+    return this.state.days[k];
+  },
+
+  getSelectedDay() {
+    return this.getDay(this.state.selectedDate);
   }
 };
 
+/* ---------- Render ---------- */
 const Render = {
-  all(){
-    this.header();
-    this.listToday();
-    Library.render();
-    Trends.render();
-  },
-  header(){
-    const day = App.getToday();
-    const goal = nnum(App.state.settings.goal);
+  all() {
+    const dayKey = App.state.selectedDate;
+    const day = App.getSelectedDay();
+    const goal = App.state.settings.c;
 
-    const eaten = day.logs.reduce((a,b)=>a+nnum(b.c), 0);
-    const burn  = nnum(day.burn);
+    // totals
+    const eaten = day.logs.reduce((a, b) => a + (Number(b.c) || 0), 0);
+    const burn = Number(day.burn) || 0;
     const net = eaten - burn;
 
-    const rem = Math.max(0, goal - net);
-    document.getElementById("val-rem").textContent = round0(rem);
-    document.getElementById("val-net").textContent = round0(net);
-    document.getElementById("val-burned").textContent = round0(burn);
-    document.getElementById("val-water").textContent = (nnum(day.water)*0.25).toFixed(1);
+    // header date pill
+    const dateLabel = document.getElementById("home-date-label");
+    if (dateLabel) dateLabel.innerText = prettyDate_(dayKey);
 
-    // Weight in header = latest by date
-    const dates = Object.keys(App.state.weightHistory).sort();
-    const w = dates.length ? App.state.weightHistory[dates[dates.length-1]] : "--";
-    document.getElementById("header-weight").textContent = (w==="--" ? w : round1(w));
+    // main
+    const rem = Math.round(Math.max(0, goal - net));
+    const pct = clamp_((net / goal) * 100, 0, 100);
 
-    // ring %
-    const pct = clamp(goal ? (net/goal)*100 : 0, 0, 100);
-    document.getElementById("val-pct").textContent = `${round0(pct)}%`;
-
-    // ring stroke
-    const circumference = 2*Math.PI*40; // r=40
-    const offset = circumference - (circumference * pct / 100);
+    const elRem = document.getElementById("val-rem");
+    const elNet = document.getElementById("val-net");
+    const elBurn = document.getElementById("val-burned");
+    const elWater = document.getElementById("val-water");
+    const elPct = document.getElementById("val-pct");
     const ring = document.getElementById("ring-progress");
-    ring.style.strokeDasharray = String(circumference);
-    ring.style.strokeDashoffset = String(offset);
 
-    // macros totals today
-    const macros = day.logs.reduce((a,b)=>({
-      p:a.p+nnum(b.p), cb:a.cb+nnum(b.cb), f:a.f+nnum(b.f)
-    }), {p:0,cb:0,f:0});
+    if (elRem) elRem.innerText = rem;
+    if (elNet) elNet.innerText = Math.round(net);
+    if (elBurn) elBurn.innerText = Math.round(burn);
+    if (elWater) elWater.innerText = ((Number(day.water) || 0) * 0.25).toFixed(1);
+    if (elPct) elPct.innerText = Math.round(pct) + "%";
+    if (ring) ring.style.strokeDashoffset = 214 - (214 * pct) / 100;
 
-    const tp = nnum(App.state.settings.pro);
-    const tc = nnum(App.state.settings.carb);
-    const tf = nnum(App.state.settings.fat);
+    // macros totals
+    const m = day.logs.reduce(
+      (a, b) => ({
+        p: a.p + (Number(b.p) || 0),
+        cb: a.cb + (Number(b.cb) || 0),
+        f: a.f + (Number(b.f) || 0)
+      }),
+      { p: 0, cb: 0, f: 0 }
+    );
 
-    document.getElementById("curr-pro").textContent = round0(macros.p);
-    document.getElementById("curr-carb").textContent = round0(macros.cb);
-    document.getElementById("curr-fat").textContent = round0(macros.f);
+    // If you have these elements in your UI, keep them
+    const proCurr = document.getElementById("curr-pro");
+    const proTgt = document.getElementById("tgt-pro");
+    const proBar = document.getElementById("bar-pro");
 
-    document.getElementById("tgt-pro").textContent = round0(tp);
-    document.getElementById("tgt-carb").textContent = round0(tc);
-    document.getElementById("tgt-fat").textContent = round0(tf);
+    const carbCurr = document.getElementById("curr-carb");
+    const carbTgt = document.getElementById("tgt-carb");
+    const carbBar = document.getElementById("bar-carb");
 
-    const pPct = clamp(tp ? (macros.p/tp)*100 : 0, 0, 100);
-    const cPct = clamp(tc ? (macros.cb/tc)*100 : 0, 0, 100);
-    const fPct = clamp(tf ? (macros.f/tf)*100 : 0, 0, 100);
+    const fatCurr = document.getElementById("curr-fat");
+    const fatTgt = document.getElementById("tgt-fat");
+    const fatBar = document.getElementById("bar-fat");
 
-    document.getElementById("bar-pro").style.width = `${pPct}%`;
-    document.getElementById("bar-carb").style.width = `${cPct}%`;
-    document.getElementById("bar-fat").style.width = `${fPct}%`;
+    const tgtPro = 130, tgtCarb = 170, tgtFat = 55;
 
-    document.getElementById("pct-pro").textContent = round0(pPct);
-    document.getElementById("pct-carb").textContent = round0(cPct);
-    document.getElementById("pct-fat").textContent = round0(fPct);
+    if (proCurr) proCurr.innerText = Math.round(m.p);
+    if (proTgt) proTgt.innerText = tgtPro;
+    if (proBar) proBar.style.width = clamp_((m.p / tgtPro) * 100, 0, 100) + "%";
+
+    if (carbCurr) carbCurr.innerText = Math.round(m.cb);
+    if (carbTgt) carbTgt.innerText = tgtCarb;
+    if (carbBar) carbBar.style.width = clamp_((m.cb / tgtCarb) * 100, 0, 100) + "%";
+
+    if (fatCurr) fatCurr.innerText = Math.round(m.f);
+    if (fatTgt) fatTgt.innerText = tgtFat;
+    if (fatBar) fatBar.style.width = clamp_((m.f / tgtFat) * 100, 0, 100) + "%";
+
+    // weight chip
+    const weights = Object.keys(App.state.weightHistory).sort();
+    const latestW = weights.length ? App.state.weightHistory[weights[weights.length - 1]] : "--";
+    const headerW = document.getElementById("header-weight");
+    if (headerW) headerW.innerText = latestW;
+
+    this.list();
+    this.predict();
+
+    // update history calendar highlights
+    UI.renderCalendar();
   },
-  listToday(){
-    const day = App.getToday();
-    const meal = App.state.meal;
-    const items = day.logs.filter(l => l.meal === meal);
 
-    const box = document.getElementById("log-list");
-    if(!items.length){
-      box.innerHTML = `<div class="card p-5 text-center muted text-sm">No items logged for ${meal}.</div>`;
-      return;
-    }
+  list() {
+    const day = App.getSelectedDay();
+    const items = day.logs.filter((l) => l.meal === App.state.meal);
 
-    box.innerHTML = items.map(l => `
-      <div class="card logRow btn-press" onclick="Sheet.openLogEdit('${todayKey()}','${l.id}')">
+    const list = document.getElementById("log-list");
+    if (!list) return;
+
+    list.innerHTML =
+      items
+        .map(
+          (i) => `
+      <div class="glass-card p-4 flex justify-between items-center">
         <div>
-          <div class="logName">${escapeHtml(l.n)} <span class="muted" style="font-weight:800;">× ${fmtQty(l.qty)}</span></div>
-          <div class="logSub">P${round0(l.p)} C${round0(l.cb)} F${round0(l.f)}</div>
+          <div class="text-white font-bold text-sm">
+            ${escapeHtml_(i.n)} <span class="text-zinc-500 font-normal">× ${i.qty}</span>
+          </div>
+          <div class="text-[10px] text-zinc-500 mt-1">P${Math.round(i.p)} C${Math.round(i.cb)} F${Math.round(i.f)}</div>
         </div>
-        <div class="logRight">
-          <div class="logKcal">${round0(l.c)}</div>
-          <div class="logSub">kcal</div>
+
+        <div class="flex items-center gap-3">
+          <button class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 btn-press"
+            onclick="Data.editLog('${i.id}')">
+            <i class="ph-bold ph-pencil-simple"></i>
+          </button>
+          <button class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-red-400 btn-press"
+            onclick="Data.deleteLog('${i.id}')">
+            <i class="ph-bold ph-trash"></i>
+          </button>
+          <span class="text-blue-400 font-bold w-12 text-right">${Math.round(i.c)}</span>
         </div>
       </div>
-    `).join("");
+    `
+        )
+        .join("") ||
+      `<div class="text-center py-6 text-zinc-700 text-[10px] border border-dashed border-zinc-800 rounded-2xl">Empty</div>`;
+  },
+
+  predict() {
+    const eta = document.getElementById("eta-date");
+    if (!eta) return;
+
+    const dates = Object.keys(App.state.weightHistory).sort();
+    if (dates.length < 2) return (eta.innerText = "Log 2+ Weights");
+
+    const w0 = Number(App.state.weightHistory[dates[0]]);
+    const w1 = Number(App.state.weightHistory[dates[dates.length - 1]]);
+    const diff = w0 - w1;
+    const velocity = diff / dates.length;
+
+    if (velocity <= 0) return (eta.innerText = "Steady State");
+
+    const days = Math.ceil((w1 - 72) / velocity);
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    eta.innerText = d.toLocaleDateString([], { month: "short", day: "numeric" });
   }
 };
 
-function fmtQty(q){
-  const n = nnum(q);
-  if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
-  return n.toFixed(2).replace(/\.00$/,'').replace(/0$/,'');
-}
-function escapeHtml(str){
-  return String(str||"")
-    .replaceAll("&","&amp;").replaceAll("<","&lt;")
-    .replaceAll(">","&gt;").replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
+/* ---------- UI ---------- */
 const UI = {
-  nav(view, btn, skipSave=false){
-    const map = {
-      home: "view-home",
-      trends: "view-trends",
-      history:"view-history",
-      library:"view-library"
-    };
-    const id = map[view] || "view-home";
+  nav(idx, btn, viewId) {
+    document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
 
-    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active-view"));
-    document.getElementById(id).classList.add("active-view");
+    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active-view"));
+    const view = document.getElementById(viewId);
+    if (view) view.classList.add("active-view");
 
-    document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-    if(btn) btn.classList.add("active");
-    else {
-      // set active based on view when swipe called
-      const idx = {home:0,trends:1,history:2,library:3}[view] ?? 0;
-      document.querySelectorAll(".nav-btn")[idx]?.classList.add("active");
-    }
-
-    App.state.ui.view = view;
-    if(!skipSave) App.save();
-
-    // rerenders
-    if(view==="trends") Trends.render();
-    if(view==="history") History.renderDays();
-    if(view==="library") Library.render();
+    if (idx === 1) Analytics.render();
+    if (idx === 2) this.renderCalendar();
   },
 
-  openSheet(name){
-    document.getElementById("backdrop").style.display = "block";
-    document.getElementById(`sheet-${name}`).classList.add("open");
-  },
-  closeAllSheets(){
-    document.getElementById("backdrop").style.display = "none";
-    document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("open"));
+  open(id) {
+    const backdrop = document.getElementById("backdrop");
+    const sheet = document.getElementById(`sheet-${id}`);
+    if (backdrop) backdrop.style.display = "block";
+    if (sheet) sheet.classList.add("open");
   },
 
-  enableSwipeNav(){
-    let startX=0, startY=0, t0=0;
-    const main = document.getElementById("scroll-area");
-    const views = ["home","trends","history","library"];
-
-    main.addEventListener("touchstart", (e)=>{
-      if(!e.touches?.length) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      t0 = Date.now();
-    }, {passive:true});
-
-    main.addEventListener("touchend", (e)=>{
-      const dt = Date.now()-t0;
-      if(dt>450) return;
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const dx = endX - startX;
-      const dy = endY - startY;
-
-      // horizontal swipe only
-      if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)*1.2) return;
-
-      const cur = App.state.ui.view || "home";
-      let i = views.indexOf(cur); if(i<0) i=0;
-
-      if(dx < 0) i = Math.min(views.length-1, i+1);
-      else i = Math.max(0, i-1);
-
-      UI.nav(views[i], null);
-    }, {passive:true});
-  }
-};
-
-const Settings = {
-  render(){
-    const s = App.state.settings;
-    const cal = document.getElementById("s-cal");
-    const pro = document.getElementById("s-pro");
-    const carb= document.getElementById("s-carb");
-    const fat = document.getElementById("s-fat");
-    const url = document.getElementById("s-url");
-    const tok = document.getElementById("s-token");
-    if(!cal) return;
-
-    cal.value = round0(s.goal);
-    pro.value = round0(s.pro);
-    carb.value = round0(s.carb);
-    fat.value = round0(s.fat);
-    url.value = s.url || "";
-    tok.value = s.token || "";
+  closeAll() {
+    const backdrop = document.getElementById("backdrop");
+    if (backdrop) backdrop.style.display = "none";
+    document.querySelectorAll(".sheet").forEach((s) => s.classList.remove("open"));
   },
-  save(){
-    App.state.settings.goal = clamp(round0(document.getElementById("s-cal").value), 800, 5000);
-    App.state.settings.pro  = clamp(round0(document.getElementById("s-pro").value), 0, 400);
-    App.state.settings.carb = clamp(round0(document.getElementById("s-carb").value), 0, 600);
-    App.state.settings.fat  = clamp(round0(document.getElementById("s-fat").value), 0, 200);
-    App.state.settings.url  = (document.getElementById("s-url").value || "").trim();
-    App.state.settings.token= (document.getElementById("s-token").value || "").trim();
-    App.save();
-    Render.all();
-    UI.closeAllSheets();
-    alert("Saved ✅");
-  }
-};
 
-const Foods = {
-  allFoods(){
-    // dedupe by id
-    const map = new Map();
-    [...App.state.customFoods, ...FOOD_DB].forEach(f => map.set(f.id, f));
-    return [...map.values()];
-  },
-  search(){
-    const q = (document.getElementById("search-input").value || "").toLowerCase().trim();
-    const box = document.getElementById("search-results");
-    if(!q){
-      box.classList.add("hidden");
-      box.innerHTML = "";
-      return;
-    }
+  renderCalendar() {
+    const body = document.getElementById("calendar-body");
+    if (!body) return;
 
-    const foods = this.allFoods();
-    const hits = foods
-      .filter(f => f.n.toLowerCase().includes(q))
-      .slice(0, 12);
+    body.innerHTML = "";
+    const keys = Object.keys(App.state.days).sort(); // oldest -> newest
 
-    box.classList.remove("hidden");
-    box.innerHTML = hits.map(f => {
-      const isFav = App.state.favorites.includes(f.id);
-      return `
-        <div class="card p-4 flex items-center justify-between gap-3">
-          <button class="btn-press flex-1 text-left" onclick="Sheet.openFood('${f.id}')">
-            <div class="font-black text-sm text-white">${escapeHtml(f.n)} <span class="muted" style="font-weight:800;">(${escapeHtml(f.u)})</span></div>
-            <div class="muted text-xs mt-1">P${round0(f.p)} C${round0(f.cb)} F${round0(f.f)} · <b style="color:#9fc0ff">${round0(f.c)} kcal</b></div>
-          </button>
-          <button class="iconBtn btn-press" onclick="Foods.toggleFav('${f.id}')" title="Save">
-            <i class="ph-bold ${isFav ? "ph-star-fill" : "ph-star"}"></i>
-          </button>
-        </div>
+    const today = localISODate_();
+    const selected = App.state.selectedDate;
+
+    // Show latest ~35 days if too many
+    const visible = keys.slice(Math.max(0, keys.length - 35));
+
+    visible.forEach((date) => {
+      const day = App.state.days[date];
+      const goal = App.state.settings.c;
+      const eaten = (day.logs || []).reduce((a, b) => a + (Number(b.c) || 0), 0);
+      const burn = Number(day.burn) || 0;
+      const net = eaten - burn;
+
+      let base = "bg-zinc-900/50 text-zinc-400 border border-zinc-800";
+      if (net > goal * 1.1) base = "bg-red-500/15 text-red-300 border border-red-500/20";
+      if (net < goal * 0.9) base = "bg-emerald-500/12 text-emerald-300 border border-emerald-500/20";
+
+      // highlight today & selected
+      const isToday = date === today;
+      const isSelected = date === selected;
+
+      const extra =
+        (isToday ? " ring-2 ring-blue-500/60 " : "") +
+        (isSelected ? " ring-2 ring-white/70 " : "");
+
+      body.innerHTML += `
+        <button
+          onclick="UI.openDay('${date}')"
+          class="aspect-square rounded-xl flex items-center justify-center text-[11px] font-black ${base} ${extra} btn-press"
+          title="${prettyDate_(date)}"
+        >
+          ${date.split("-")[2]}
+        </button>
       `;
-    }).join("") || `<div class="card p-5 text-center muted text-sm">No results. Create a custom food.</div>`;
+    });
   },
-  toggleFav(id){
-    const favs = App.state.favorites;
-    const i = favs.indexOf(id);
-    if(i>=0) favs.splice(i,1);
-    else favs.push(id);
-    App.save();
-    this.search();
-    Library.render();
-    Sheet.refreshFavLabel();
+
+  openDay(date) {
+    App.setSelectedDate(date);
+    // switch to home tab automatically
+    const homeBtn = document.querySelectorAll(".nav-btn")[0];
+    UI.nav(0, homeBtn, "view-home");
   },
-  createCustom(){
-    const name = (document.getElementById("c-name").value || "").trim();
-    const unit = (document.getElementById("c-unit").value || "1 serving").trim();
-    const kcal = nnum(document.getElementById("c-kcal").value);
-    const pro  = nnum(document.getElementById("c-pro").value);
-    const carb = nnum(document.getElementById("c-carb").value);
-    const fat  = nnum(document.getElementById("c-fat").value);
 
-    if(!name || kcal<=0){
-      alert("Please enter at least Name + Calories");
-      return;
-    }
+  attachHomeSwipe() {
+    const home = document.getElementById("view-home");
+    if (!home) return;
 
-    const id = "custom_" + uid().slice(0,8);
-    App.state.customFoods.unshift({ id, n:name, u:unit, c:round1(kcal), p:round1(pro), cb:round1(carb), f:round1(fat) });
-    App.save();
+    let x0 = null;
+    let y0 = null;
 
-    UI.closeAllSheets();
-    alert("Saved custom food ✅");
+    home.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches.length) return;
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+    }, { passive: true });
+
+    home.addEventListener("touchend", (e) => {
+      if (x0 === null || y0 === null) return;
+
+      const x1 = e.changedTouches[0].clientX;
+      const y1 = e.changedTouches[0].clientY;
+
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+
+      // swipe must be more horizontal than vertical
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) Data.shiftDay(+1); // swipe left -> next day
+        else Data.shiftDay(-1);        // swipe right -> prev day
+      }
+
+      x0 = null;
+      y0 = null;
+    }, { passive: true });
   }
 };
 
-const Library = {
-  render(){
-    const box = document.getElementById("library-list");
-    if(!box) return;
+/* ---------- Foods / Search ---------- */
+const Foods = {
+  search() {
+    const q = document.getElementById("search-input").value.trim().toLowerCase();
+    const res = document.getElementById("search-results");
+    if (!q) { res.classList.add("hidden"); return; }
 
-    const q = (document.getElementById("library-search")?.value || "").toLowerCase().trim();
-    const favs = new Set(App.state.favorites);
-    const foods = Foods.allFoods().filter(f => favs.has(f.id));
-    const filtered = q ? foods.filter(f => f.n.toLowerCase().includes(q)) : foods;
+    const pool = [...App.state.custom, ...DB];
+    const hits = pool.filter((f) => (f.n || "").toLowerCase().includes(q)).slice(0, 5);
 
-    if(!filtered.length){
-      box.innerHTML = `<div class="card p-5 text-center muted text-sm">No saved foods yet. Search on Home and tap ★</div>`;
-      return;
-    }
+    res.classList.remove("hidden");
 
-    box.innerHTML = filtered
-      .sort((a,b)=>a.n.localeCompare(b.n))
-      .map(f => `
-        <div class="card p-4 flex items-center justify-between gap-3 btn-press" onclick="Sheet.openFood('${f.id}')">
+    const cards = hits.map((f) => `
+      <div onclick="Sheet.openAdd('${f.id}')" class="bg-zinc-900 p-3 rounded-xl flex justify-between items-center border border-zinc-800 btn-press">
+        <div class="text-white text-sm font-bold">${escapeHtml_(f.n)}</div>
+        <div class="text-zinc-500 text-xs">${Math.round(f.c)} kcal</div>
+      </div>
+    `);
+
+    if (hits.length === 0) {
+      cards.push(`
+        <div onclick="CustomFood.open('${q.replace(/'/g, "\\'")}')" class="bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl flex items-center justify-between btn-press">
           <div>
-            <div class="font-black text-sm text-white">${escapeHtml(f.n)}</div>
-            <div class="muted text-xs mt-1">${escapeHtml(f.u)} · ${round0(f.c)} kcal</div>
+            <div class="text-white font-bold text-sm">Add “${escapeHtml_(q)}”</div>
+            <div class="text-zinc-400 text-xs mt-1">Not found — create your own entry</div>
           </div>
-          <i class="ph-bold ph-plus-circle" style="color:#9fc0ff; font-size:22px;"></i>
+          <i class="ph-bold ph-plus-circle text-blue-400 text-2xl"></i>
         </div>
-      `).join("");
+      `);
+    } else {
+      cards.push(`
+        <div onclick="CustomFood.open('${q.replace(/'/g, "\\'")}')" class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex items-center justify-between btn-press">
+          <div>
+            <div class="text-white font-bold text-sm">Add new food</div>
+            <div class="text-zinc-500 text-xs mt-1">Create a custom item for “${escapeHtml_(q)}”</div>
+          </div>
+          <i class="ph-bold ph-plus text-zinc-300 text-2xl"></i>
+        </div>
+      `);
+    }
+
+    res.innerHTML = cards.join("");
   }
 };
 
+/* ---------- Sheets (Food add) ---------- */
 const Sheet = {
-  mode:"food", // food or log
-  curr:null,
-  qty:1,
-  editCtx:null, // {date, logId}
+  curr: null,
+  qty: 1,
 
-  openFood(foodId){
-    const f = Foods.allFoods().find(x=>x.id===foodId);
-    if(!f) return;
-    this.mode = "food";
-    this.curr = f;
+  openAdd(fid) {
+    this.curr = [...App.state.custom, ...DB].find((f) => f.id === fid);
     this.qty = 1;
-    this.editCtx = null;
-
-    document.getElementById("sheet-mode").textContent = "Add";
-    document.getElementById("sheet-name").textContent = f.n;
-    document.getElementById("sheet-delete").classList.add("hidden");
-    document.getElementById("sheet-qty").textContent = fmtQty(this.qty);
-    this.updateTotal();
-    this.refreshFavLabel();
-    UI.openSheet("food");
+    this.render();
+    UI.open("food");
   },
 
-  openLogEdit(date, logId){
-    const day = App.state.days[date];
-    if(!day) return;
-    const l = day.logs.find(x=>x.id===logId);
-    if(!l) return;
-
-    this.mode="log";
-    this.curr = { ...l };
-    this.qty = nnum(l.qty) || 1;
-    this.editCtx = { date, logId };
-
-    document.getElementById("sheet-mode").textContent = "Edit";
-    document.getElementById("sheet-name").textContent = l.n;
-    document.getElementById("sheet-delete").classList.remove("hidden");
-
-    document.getElementById("sheet-qty").textContent = fmtQty(this.qty);
-    this.updateTotal(true);
-    this.refreshFavLabel(l.foodId);
-
-    UI.openSheet("food");
+  render() {
+    if (!this.curr) return;
+    document.getElementById("sheet-name").innerText = this.curr.n;
+    document.getElementById("sheet-qty").innerText = this.qty.toFixed(1);
+    document.getElementById("sheet-total").innerText = Math.round(this.curr.c * this.qty) + " kcal";
   },
 
-  refreshFavLabel(forcedFoodId){
-    const foodId = forcedFoodId || this.curr?.id || this.curr?.foodId;
-    const isFav = App.state.favorites.includes(foodId);
-    const el = document.getElementById("sheet-fav");
-    if(el) el.textContent = isFav ? "Saved" : "Save";
+  adj(d) {
+    this.qty = Math.max(0.5, this.qty + d);
+    this.render();
   },
 
-  adj(delta){
-    this.qty = clamp(round1(this.qty + delta), 0.25, 50);
-    document.getElementById("sheet-qty").textContent = fmtQty(this.qty);
-    this.updateTotal(this.mode==="log");
-  },
+  save() {
+    const day = App.getSelectedDay();
+    const now = Date.now();
 
-  updateTotal(isLog){
-    if(!this.curr) return;
-    const base = this.curr;
-    const q = this.qty;
-
-    const kcal = isLog ? nnum(base.c) : nnum(base.c) * q;
-    document.getElementById("sheet-total").textContent = `${round0(kcal)} kcal`;
-  },
-
-  toggleFav(){
-    const foodId = (this.mode==="food") ? this.curr?.id : this.curr?.foodId;
-    if(!foodId) return;
-    Foods.toggleFav(foodId);
-  },
-
-  saveToDay(){
-    if(!this.curr) return;
-
-    const day = App.getToday();
-    const meal = App.state.meal;
-
-    if(this.mode === "log" && this.editCtx){
-      // edit existing log (scale values by qty ratio)
-      const {date, logId} = this.editCtx;
-      const d = App.state.days[date];
-      const idx = d.logs.findIndex(x=>x.id===logId);
-      if(idx<0) return;
-
-      // editing using qty stepper: scale kcal/macros proportionally
-      const old = d.logs[idx];
-      const oldQty = nnum(old.qty)||1;
-      const ratio = (nnum(this.qty)||1) / oldQty;
-
-      d.logs[idx] = {
-        ...old,
-        qty: this.qty,
-        c: round1(nnum(old.c) * ratio),
-        p: round1(nnum(old.p) * ratio),
-        cb: round1(nnum(old.cb) * ratio),
-        f: round1(nnum(old.f) * ratio),
-        ts: Date.now()
-      };
-
-      App.save();
-      Render.all();
-      History.renderEditor(); // if editing history view
-      UI.closeAllSheets();
-      return;
-    }
-
-    // add new food log
-    const f = this.curr;
-    const q = this.qty;
     day.logs.unshift({
-      id: uid(),
-      meal,
-      foodId: f.id,
-      n: f.n,
-      u: f.u,
-      qty: q,
-      c: round1(nnum(f.c) * q),
-      p: round1(nnum(f.p) * q),
-      cb: round1(nnum(f.cb) * q),
-      f: round1(nnum(f.f) * q),
-      ts: Date.now()
+      ...this.curr,
+      id: now,
+      qty: this.qty,
+      c: this.curr.c * this.qty,
+      p: (this.curr.p || 0) * this.qty,
+      cb: (this.curr.cb || 0) * this.qty,
+      f: (this.curr.f || 0) * this.qty,
+      meal: App.state.meal,
+      ts: now
     });
 
     App.save();
     Render.all();
-    UI.closeAllSheets();
-
-    // clear search box for smooth UX
-    const si = document.getElementById("search-input");
-    const sr = document.getElementById("search-results");
-    if(si) si.value="";
-    if(sr){ sr.classList.add("hidden"); sr.innerHTML=""; }
-  },
-
-  deleteLog(){
-    if(!(this.mode==="log" && this.editCtx)) return;
-    const {date, logId} = this.editCtx;
-    const d = App.state.days[date];
-    if(!d) return;
-    d.logs = d.logs.filter(x=>x.id!==logId);
-    App.save();
-    Render.all();
-    History.renderEditor();
-    UI.closeAllSheets();
+    UI.closeAll();
   }
 };
 
+/* ---------- Custom Food ---------- */
+const CustomFood = {
+  open(prefillName) {
+    document.getElementById("cf-name").value = prefillName ? prefillName : "";
+    document.getElementById("cf-unit").value = "";
+    document.getElementById("cf-cal").value = "";
+    document.getElementById("cf-pro").value = "";
+    document.getElementById("cf-carb").value = "";
+    document.getElementById("cf-fat").value = "";
+    document.getElementById("cf-save-lib").checked = true;
+    UI.open("custom");
+  },
+
+  save() {
+    const name = document.getElementById("cf-name").value.trim();
+    if (!name) return alert("Enter food name");
+
+    const unit = document.getElementById("cf-unit").value.trim() || "1 serving";
+    const c = parseFloat(document.getElementById("cf-cal").value);
+    const p = parseFloat(document.getElementById("cf-pro").value) || 0;
+    const cb = parseFloat(document.getElementById("cf-carb").value) || 0;
+    const f = parseFloat(document.getElementById("cf-fat").value) || 0;
+
+    if (!isFinite(c) || c <= 0) return alert("Enter calories (kcal)");
+
+    const item = { id: uid_(), n: name, u: unit, c, p, cb, f };
+    const saveToLib = document.getElementById("cf-save-lib").checked;
+
+    if (saveToLib) App.state.custom.unshift(item);
+
+    // Add to selected day logs immediately
+    const day = App.getSelectedDay();
+    const now = Date.now();
+    day.logs.unshift({
+      ...item,
+      id: now,
+      qty: 1,
+      meal: App.state.meal,
+      ts: now
+    });
+
+    App.save();
+    Render.all();
+    UI.closeAll();
+
+    document.getElementById("search-input").value = "";
+    document.getElementById("search-results").classList.add("hidden");
+  }
+};
+
+/* ---------- Data actions ---------- */
 const Data = {
-  addWater(){
-    const day = App.getToday();
-    day.water = nnum(day.water) + 1;
-    App.save();
-    Render.header();
-    History.renderDays();
+  // Home date navigation
+  shiftDay(delta) {
+    const next = addDays_(App.state.selectedDate, delta);
+    App.setSelectedDate(next);
   },
-  addBurn(name, kcal){
-    const day = App.getToday();
-    day.burn = nnum(day.burn) + nnum(kcal);
-    App.save();
-    Render.all();
-    UI.closeAllSheets();
-  },
-  saveWeight(){
-    const v = nnum(document.getElementById("w-val").value);
-    if(v<=0){ alert("Enter a valid weight"); return; }
-    App.state.weightHistory[todayKey()] = round1(v);
+
+  // Water controls now affect SELECTED day (not only today)
+  addWater() {
+    const day = App.getSelectedDay();
+    day.water = (Number(day.water) || 0) + 1;
     App.save();
     Render.all();
-    UI.closeAllSheets();
   },
-  resetToday(){
-    if(!confirm("Reset today?")) return;
-    App.state.days[todayKey()] = { logs: [], burn: 0, water: 0 };
+
+  removeWater() {
+    const day = App.getSelectedDay();
+    day.water = Math.max(0, (Number(day.water) || 0) - 1);
     App.save();
     Render.all();
-    History.renderDays();
   },
-  resetAll(){
-    if(!confirm("Factory reset local data?")) return;
-    localStorage.removeItem(STORAGE_KEY);
+
+  addExercise(name, kcal) {
+    const day = App.getSelectedDay();
+    day.burn = (Number(day.burn) || 0) + Number(kcal || 0);
+    App.save();
+    Render.all();
+    UI.closeAll();
+  },
+
+  editLog(logId) {
+    // Simple edit: open food sheet with that log’s values as qty adjustment
+    // For pro editing, you can add another sheet—this is minimal but works.
+    const day = App.getSelectedDay();
+    const log = day.logs.find((l) => String(l.id) === String(logId));
+    if (!log) return;
+
+    // Re-open the standard sheet and allow qty edits
+    Sheet.curr = { id: log.id, n: log.n, u: log.u, c: log.c / (log.qty || 1), p: log.p / (log.qty || 1), cb: log.cb / (log.qty || 1), f: log.f / (log.qty || 1) };
+    Sheet.qty = Number(log.qty) || 1;
+    Sheet.render();
+
+    // Save will add a new entry, so instead we do update on save:
+    // set a flag for edit mode
+    Sheet._editId = logId;
+    UI.open("food");
+
+    // Patch Sheet.save temporarily for edit mode:
+    const originalSave = Sheet.save.bind(Sheet);
+    Sheet.save = function() {
+      const d = App.getSelectedDay();
+      const idx = d.logs.findIndex((l) => String(l.id) === String(Sheet._editId));
+      if (idx === -1) { Sheet.save = originalSave; return originalSave(); }
+
+      const q = Sheet.qty;
+      const base = Sheet.curr;
+
+      d.logs[idx] = {
+        ...d.logs[idx],
+        n: base.n,
+        u: base.u,
+        qty: q,
+        c: base.c * q,
+        p: (base.p || 0) * q,
+        cb: (base.cb || 0) * q,
+        f: (base.f || 0) * q
+      };
+
+      Sheet._editId = null;
+      Sheet.save = originalSave;
+      App.save();
+      Render.all();
+      UI.closeAll();
+    };
+  },
+
+  deleteLog(logId) {
+    const day = App.getSelectedDay();
+    day.logs = day.logs.filter((l) => String(l.id) !== String(logId));
+    App.save();
+    Render.all();
+  },
+
+  saveSettings() {
+    const urlEl = document.getElementById("s-url");
+    const calEl = document.getElementById("s-cal");
+    App.state.settings = {
+      url: urlEl ? urlEl.value : "",
+      c: calEl ? parseInt(calEl.value || "1650", 10) : 1650
+    };
+    App.save();
+    Render.all();
+    UI.closeAll();
+  },
+
+  resetAll() {
+    localStorage.removeItem(App.key);
     location.reload();
   }
 };
 
-const History = {
-  selectedDate: null,
-  selectedLogId: null,
+/* ---------- Analytics (Trends) ---------- */
+const Analytics = {
+  render() {
+    if (!window.Chart) return;
+    const canvas = document.getElementById("chart-weight");
+    if (!canvas) return;
 
-  renderDays(){
-    const grid = document.getElementById("history-days");
-    if(!grid) return;
+    const dates = Object.keys(App.state.weightHistory).sort();
+    const data = dates.map((k) => App.state.weightHistory[k]);
 
-    // Show last 28 days squares (including those with no logs)
-    const now = new Date();
-    const dates = [];
-    for(let i=0;i<28;i++){
-      const d = new Date(now);
-      d.setDate(now.getDate()-i);
-      dates.push(d.toISOString().slice(0,10));
-    }
-
-    grid.innerHTML = dates.reverse().map(date=>{
-      const day = App.state.days[date];
-      const goal = nnum(App.state.settings.goal);
-      const eaten = day ? day.logs.reduce((a,b)=>a+nnum(b.c),0) : 0;
-      const burn = day ? nnum(day.burn) : 0;
-      const net = eaten - burn;
-
-      let cls = "bg-[#0f0f12] border border-[#26262c] text-[#6f6f7a]";
-      if(day && (day.logs.length || day.burn || day.water)){
-        if(net > goal*1.1) cls = "bg-red-500/10 border border-red-500/25 text-red-300";
-        else cls = "bg-emerald-500/10 border border-emerald-500/25 text-emerald-200";
-      }
-
-      const dd = date.slice(8,10);
-
-      return `
-        <button
-          class="aspect-square rounded-xl flex items-center justify-center text-xs font-black ${cls} btn-press"
-          onclick="History.openDay('${date}')"
-          oncontextmenu="event.preventDefault(); History.confirmDeleteDay('${date}')"
-          title="${date}"
-        >${dd}</button>
-      `;
-    }).join("");
-
-    // if editor open, refresh it
-    if(this.selectedDate) this.renderEditor();
-  },
-
-  openDay(date){
-    this.selectedDate = date;
-    document.getElementById("history-editor").classList.remove("hidden");
-    document.getElementById("history-date-title").textContent = date;
-
-    // preload day edit sheet fields
-    const d = App.state.days[date] || {logs:[], burn:0, water:0};
-    document.getElementById("hd-date").value = date;
-    document.getElementById("hd-water").value = nnum(d.water);
-    document.getElementById("hd-burn").value = nnum(d.burn);
-
-    this.renderEditor();
-  },
-
-  renderEditor(){
-    if(!this.selectedDate) return;
-    const date = this.selectedDate;
-    const box = document.getElementById("history-log-list");
-    const d = App.state.days[date] || {logs:[], burn:0, water:0};
-
-    if(!d.logs.length){
-      box.innerHTML = `<div class="card p-5 text-center muted text-sm">No logs on ${date}.</div>`;
-      return;
-    }
-
-    box.innerHTML = d.logs.map(l=>`
-      <div class="card p-4 flex items-center justify-between gap-3 btn-press" onclick="History.openLogEdit('${date}','${l.id}')">
-        <div>
-          <div class="font-black text-sm text-white">${escapeHtml(l.n)} <span class="muted" style="font-weight:800;">× ${fmtQty(l.qty)}</span></div>
-          <div class="muted text-xs mt-1">${escapeHtml(l.meal)} · P${round0(l.p)} C${round0(l.cb)} F${round0(l.f)}</div>
-        </div>
-        <div class="text-right">
-          <div class="font-black" style="color:#9fc0ff;">${round0(l.c)}</div>
-          <div class="muted text-xs">kcal</div>
-        </div>
-      </div>
-    `).join("");
-  },
-
-  openLogEdit(date, logId){
-    const d = App.state.days[date];
-    if(!d) return;
-    const l = d.logs.find(x=>x.id===logId);
-    if(!l) return;
-
-    this.selectedLogId = logId;
-
-    // fill sheet
-    document.getElementById("hl-name").value = l.n || "";
-    document.getElementById("hl-qty").value = nnum(l.qty) || 1;
-    document.getElementById("hl-kcal").value = nnum(l.c);
-    document.getElementById("hl-pro").value = nnum(l.p);
-    document.getElementById("hl-carb").value = nnum(l.cb);
-    document.getElementById("hl-fat").value = nnum(l.f);
-
-    UI.openSheet("historyLogEdit");
-  },
-
-  saveLogEdits(){
-    const date = this.selectedDate;
-    const logId = this.selectedLogId;
-    const d = App.state.days[date];
-    if(!d) return;
-
-    const idx = d.logs.findIndex(x=>x.id===logId);
-    if(idx<0) return;
-
-    d.logs[idx] = {
-      ...d.logs[idx],
-      n: (document.getElementById("hl-name").value || "").trim() || d.logs[idx].n,
-      qty: clamp(round1(document.getElementById("hl-qty").value), 0.25, 50),
-      c: round1(document.getElementById("hl-kcal").value),
-      p: round1(document.getElementById("hl-pro").value),
-      cb: round1(document.getElementById("hl-carb").value),
-      f: round1(document.getElementById("hl-fat").value),
-      ts: Date.now()
-    };
-
-    App.save();
-    Render.all();
-    this.renderDays();
-    UI.closeAllSheets();
-  },
-
-  deleteLog(){
-    const date = this.selectedDate;
-    const logId = this.selectedLogId;
-    const d = App.state.days[date];
-    if(!d) return;
-    d.logs = d.logs.filter(x=>x.id!==logId);
-
-    App.save();
-    Render.all();
-    this.renderDays();
-    UI.closeAllSheets();
-  },
-
-  saveDayEdits(){
-    const date = this.selectedDate;
-    if(!date) return;
-
-    App.state.days[date] ||= {logs:[], burn:0, water:0};
-    App.state.days[date].water = clamp(round0(document.getElementById("hd-water").value), 0, 1000);
-    App.state.days[date].burn  = clamp(round0(document.getElementById("hd-burn").value), 0, 5000);
-
-    App.save();
-    Render.all();
-    this.renderDays();
-    UI.closeAllSheets();
-  },
-
-  deleteDay(){
-    const date = this.selectedDate;
-    if(!date) return;
-    if(!confirm(`Delete entire day ${date}?`)) return;
-
-    delete App.state.days[date];
-    App.save();
-    this.selectedDate = null;
-    document.getElementById("history-editor").classList.add("hidden");
-
-    Render.all();
-    this.renderDays();
-    UI.closeAllSheets();
-  },
-
-  confirmDeleteDay(date){
-    if(!confirm(`Delete day ${date}?`)) return;
-    delete App.state.days[date];
-    App.save();
-    Render.all();
-    this.renderDays();
-  }
-};
-
-const Trends = {
-  mode:"day",
-  chartNet:null,
-  chartMacros:null,
-  chartWeight:null,
-
-  init(){
-    this.mode = App.state.ui.trendMode || "day";
-    this.applySegmentUI();
-  },
-  setMode(mode){
-    this.mode = mode;
-    App.state.ui.trendMode = mode;
-    App.save();
-    this.applySegmentUI();
-    this.render();
-  },
-  applySegmentUI(){
-    ["day","week","month"].forEach(m=>{
-      const btn = document.getElementById(`trend-${m}`);
-      if(btn) btn.classList.toggle("active", m===this.mode);
+    if (window.wChart) window.wChart.destroy();
+    window.wChart = new Chart(canvas, {
+      type: "line",
+      data: { labels: dates.map((d) => d.slice(5)), datasets: [{ label: "Weight", data, tension: 0.35, borderColor: "#10b981" }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
     });
-  },
-
-  render(){
-    // build data rows based on mode
-    const rows = this.aggregate(this.mode);
-
-    // net calories chart
-    const labels = rows.map(r=>r.label);
-    const net = rows.map(r=>r.net);
-
-    const ctxNet = document.getElementById("chart-net");
-    if(ctxNet){
-      if(this.chartNet) this.chartNet.destroy();
-      this.chartNet = new Chart(ctxNet, {
-        type:"line",
-        data:{ labels, datasets:[{
-          label:"Net kcal",
-          data: net,
-          tension:.35
-        }]},
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          plugins:{ legend:{display:false} },
-          scales:{
-            x:{ ticks:{ color:"#6f6f7a" }, grid:{ display:false } },
-            y:{ ticks:{ color:"#6f6f7a" }, grid:{ color:"rgba(255,255,255,0.06)" }, beginAtZero:true }
-          }
-        }
-      });
-    }
-
-    // macros stacked bar-ish (3 datasets)
-    const ctxM = document.getElementById("chart-macros");
-    if(ctxM){
-      if(this.chartMacros) this.chartMacros.destroy();
-      this.chartMacros = new Chart(ctxM, {
-        type:"bar",
-        data:{
-          labels,
-          datasets:[
-            { label:"Protein", data: rows.map(r=>r.p) },
-            { label:"Carbs", data: rows.map(r=>r.cb) },
-            { label:"Fat", data: rows.map(r=>r.f) },
-          ]
-        },
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          plugins:{ legend:{ labels:{ color:"#9a9aa4" } } },
-          scales:{
-            x:{ ticks:{ color:"#6f6f7a" }, grid:{ display:false } },
-            y:{ ticks:{ color:"#6f6f7a" }, grid:{ color:"rgba(255,255,255,0.06)" }, beginAtZero:true }
-          }
-        }
-      });
-    }
-
-    // weight chart (always by day, last 30)
-    const wDates = Object.keys(App.state.weightHistory).sort().slice(-30);
-    const wVals  = wDates.map(d=>App.state.weightHistory[d]);
-    const ctxW = document.getElementById("chart-weight");
-    if(ctxW){
-      if(this.chartWeight) this.chartWeight.destroy();
-      this.chartWeight = new Chart(ctxW, {
-        type:"line",
-        data:{ labels: wDates.map(d=>d.slice(5)), datasets:[{ label:"Weight", data:wVals, tension:.35 }]},
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          plugins:{ legend:{display:false} },
-          scales:{
-            x:{ ticks:{ color:"#6f6f7a" }, grid:{ display:false } },
-            y:{ ticks:{ color:"#6f6f7a" }, grid:{ color:"rgba(255,255,255,0.06)" } }
-          }
-        }
-      });
-    }
-  },
-
-  aggregate(mode){
-    // Build daily list first (sorted)
-    const keys = Object.keys(App.state.days).sort();
-    const daily = keys.map(date=>{
-      const d = App.state.days[date];
-      const eaten = d.logs.reduce((a,b)=>a+nnum(b.c),0);
-      const burn = nnum(d.burn);
-      const net = eaten - burn;
-      const macros = d.logs.reduce((a,b)=>({p:a.p+nnum(b.p), cb:a.cb+nnum(b.cb), f:a.f+nnum(b.f)}), {p:0,cb:0,f:0});
-      return { date, net:round0(net), p:round0(macros.p), cb:round0(macros.cb), f:round0(macros.f) };
-    });
-
-    // If no data, provide empty
-    if(!daily.length) return [{ label:"-", net:0, p:0, cb:0, f:0 }];
-
-    if(mode==="day"){
-      return daily.slice(-14).map(r=>({ ...r, label: r.date.slice(5) }));
-    }
-
-    // group by week or month
-    const groups = new Map();
-
-    for(const r of daily){
-      const d = new Date(r.date+"T00:00:00");
-      let key,label;
-      if(mode==="week"){
-        // ISO-ish week key (year-week)
-        const y = d.getFullYear();
-        const week = getWeekNumber(d);
-        key = `${y}-W${String(week).padStart(2,"0")}`;
-        label = `W${String(week).padStart(2,"0")}`;
-      } else {
-        key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-        label = d.toLocaleDateString(undefined,{month:"short"});
-      }
-
-      if(!groups.has(key)) groups.set(key, { label, net:0, p:0, cb:0, f:0, count:0 });
-      const g = groups.get(key);
-      g.net += r.net;
-      g.p += r.p;
-      g.cb += r.cb;
-      g.f += r.f;
-      g.count += 1;
-    }
-
-    const arr = [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(x=>x[1]);
-
-    // For week/month, show average per day for net (looks nicer)
-    if(mode==="week" || mode==="month"){
-      for(const g of arr){
-        g.net = round0(g.net / Math.max(1,g.count));
-        g.p = round0(g.p / Math.max(1,g.count));
-        g.cb= round0(g.cb/ Math.max(1,g.count));
-        g.f = round0(g.f / Math.max(1,g.count));
-      }
-    }
-
-    return arr.slice(-12);
   }
 };
 
-function getWeekNumber(d){
-  // week number (simple, good enough)
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-  return Math.ceil((((date - yearStart)/86400000) + 1) / 7);
-}
-
-/** Secure Sync */
-const Sync = {
-  async syncNow(){
-    const {url, token} = App.state.settings;
-    if(!url || !token){
-      alert("Set Web App URL + Token in Settings first.");
-      return;
-    }
-
-    const btn = document.getElementById("sync-btn");
-    btn.querySelector("i").classList.add("sync-spin");
-
-    const payload = {
-      app:"m72_elite",
-      v: App.state.v,
-      sentAt: new Date().toISOString(),
-      state: App.state
-    };
-
-    try{
-      // Try normal CORS fetch
-      const res = await fetch(url, {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "X-M72-TOKEN": token
-        },
-        body: JSON.stringify(payload),
-      });
-
-      // If browser blocks reading due to CORS, res may throw before here.
-      const txt = await res.text().catch(()=> "");
-      if(!res.ok){
-        alert("Sync failed:\n" + txt);
-      } else {
-        alert("Synced ✅");
-      }
-    } catch(err){
-      // Fallback: send-only no-cors
-      try{
-        await fetch(url, {
-          method:"POST",
-          mode:"no-cors",
-          headers:{
-            "Content-Type":"application/json",
-            "X-M72-TOKEN": token
-          },
-          body: JSON.stringify(payload),
-        });
-        alert("Sync sent ✅ (no-cors)");
-      } catch(e2){
-        alert("Sync failed. Check Web App URL / deploy access.\n\n" + String(err));
-      }
-    } finally {
-      btn.querySelector("i").classList.remove("sync-spin");
-    }
-  }
-};
-
-// Boot
-window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") UI.closeAllSheets(); });
-App.init();
+/* ---------- Boot ---------- */
+document.addEventListener("DOMContentLoaded", () => App.init());
