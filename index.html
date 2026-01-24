@@ -11,11 +11,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    /* View Visibility */
     .view { display: none; }
     .view.active-view { display: block !important; }
 
-    /* App Shell */
     body {
       background: #000;
       color: #f4f4f5;
@@ -36,7 +34,6 @@
       z-index: 10;
     }
 
-    /* Bottom Navigation */
     #nav-bar {
       height: calc(78px + env(safe-area-inset-bottom));
       background: #070709;
@@ -57,106 +54,36 @@
       gap: 4px;
       font-weight: 800;
       font-size: 9px;
-      width: 25%;
+      width: 20%; /* Adjusted for 3 items */
       transition: color .2s ease;
-      user-select: none;
     }
 
-    .nav-btn i { font-size: 22px; }
     .nav-btn.active { color: #fff; }
     .nav-btn.active i { color: #3b82f6; }
 
-    /* Premium UI Components */
-    .card {
-      background: #101012;
-      border: 1px solid #27272a;
-      border-radius: 24px;
-    }
-
-    .card-soft {
-      background: #0b0b0d;
-      border: 1px solid #27272a;
-      border-radius: 20px;
-    }
-
+    .card { background: #101012; border: 1px solid #27272a; border-radius: 24px; }
+    .card-soft { background: #0b0b0d; border: 1px solid #27272a; border-radius: 20px; }
     .btn-press:active { transform: scale(0.98); }
 
-    /* Bottom Sheets */
-    .sheet-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.78);
-      z-index: 100;
-      display: none;
-    }
-
+    .sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); z-index: 100; display: none; }
     .sheet {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #070709;
-      border-top: 1px solid #27272a;
-      border-radius: 30px 30px 0 0;
-      z-index: 101;
-      padding: 18px;
-      transform: translateY(105%);
-      transition: transform .28s ease;
-      max-height: 85vh;
-      overflow-y: auto;
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: #070709; border-top: 1px solid #27272a;
+      border-radius: 30px 30px 0 0; z-index: 101; padding: 18px;
+      transform: translateY(105%); transition: transform .28s ease;
+      max-height: 85vh; overflow-y: auto;
     }
-
     .sheet.open { transform: translateY(0); }
+    .sheet-handle { width: 52px; height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); margin: 2px auto 12px auto; }
 
-    .sheet-handle {
-      width: 52px;
-      height: 5px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
-      margin: 2px auto 12px auto;
-    }
-
-    /* Form Elements */
-    input {
-      background: #101012;
-      border: 1px solid #27272a;
-      border-radius: 14px;
-      padding: 12px;
-      color: #fff;
-      outline: none;
-      width: 100%;
-      font-size: 14px;
-    }
-
-    .pill {
-      border: 1px solid #27272a;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: #a1a1aa;
-      background: #0b0b0d;
-    }
-
+    input { background: #101012; border: 1px solid #27272a; border-radius: 14px; padding: 12px; color: #fff; outline: none; width: 100%; font-size: 14px; }
+    .pill { border: 1px solid #27272a; border-radius: 999px; padding: 6px 10px; font-size: 10px; font-weight: 800; color: #a1a1aa; background: #0b0b0d; text-transform: uppercase; }
     .mono { font-variant-numeric: tabular-nums; }
 
-    /* Calendar Grid */
-    .day-cell {
-      aspect-ratio: 1 / 1;
-      border-radius: 14px;
-      border: 1px solid #27272a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 12px;
-    }
-
+    .day-cell { aspect-ratio: 1/1; border-radius: 14px; border: 1px solid #27272a; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; }
     .day-cell.good { background: rgba(16, 185, 129, 0.12); color: rgb(110, 231, 183); border-color: rgba(16, 185, 129, 0.22); }
     .day-cell.bad { background: rgba(239, 68, 68, 0.12); color: rgb(252, 165, 165); border-color: rgba(239, 68, 68, 0.22); }
-    .day-cell.selected { border: 2px solid #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+    .day-cell.selected { border: 2px solid #3b82f6; }
 
     ::-webkit-scrollbar { display: none; }
   </style>
@@ -166,7 +93,6 @@
   <div id="scroll-area">
 
     <div id="view-home" class="view active-view">
-      
       <header class="flex items-center justify-between mb-5 pt-1">
         <div class="flex items-center gap-3">
           <div class="w-11 h-11 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center">
@@ -175,40 +101,29 @@
           <div>
             <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Mission 72</div>
             <div class="flex items-center gap-2">
-              <button onclick="Data.shiftDay(-1)" class="btn-press text-zinc-500 hover:text-white p-1">
-                <i class="ph-bold ph-caret-left"></i>
-              </button>
+              <button onclick="Data.shiftDay(-1)" class="btn-press text-zinc-500 p-1"><i class="ph-bold ph-caret-left"></i></button>
               <div class="text-lg font-black text-white min-w-[100px] text-center" id="home-title-day">Today</div>
-              <button onclick="Data.shiftDay(1)" class="btn-press text-zinc-500 hover:text-white p-1">
-                <i class="ph-bold ph-caret-right"></i>
-              </button>
+              <button onclick="Data.shiftDay(1)" class="btn-press text-zinc-500 p-1"><i class="ph-bold ph-caret-right"></i></button>
             </div>
           </div>
         </div>
-
         <div class="flex gap-2">
-          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300" onclick="UI.openSheet('settings')">
-            <i class="ph-bold ph-gear text-xl"></i>
-          </button>
-          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-blue-400" onclick="UI.openSheet('quickWeight')">
-            <i class="ph-bold ph-scales text-xl"></i>
-          </button>
+          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300" onclick="UI.openSheet('settings')"><i class="ph-bold ph-gear"></i></button>
+          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-blue-400" onclick="UI.openSheet('quickWeight')"><i class="ph-bold ph-scales"></i></button>
         </div>
       </header>
 
-      <section class="card p-6 mb-4 relative overflow-hidden">
-        <div class="relative z-10 flex items-center justify-between gap-4">
+      <section class="card p-6 mb-4">
+        <div class="flex items-center justify-between gap-4">
           <div>
-            <div class="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">Remaining</div>
-            <div class="text-6xl font-black tracking-tighter leading-none mono" id="val-rem">0</div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span class="pill">Net <span class="mono" id="val-net">0</span></span>
-              <span class="pill">Goal <span class="mono" id="val-goal">1650</span></span>
-              <span class="pill">Wt <span class="mono" id="header-weight">--</span> kg</span>
+            <div class="text-[11px] font-black uppercase text-zinc-500">Remaining</div>
+            <div class="text-6xl font-black mono" id="val-rem">0</div>
+            <div class="mt-3 flex gap-2">
+              <span class="pill">Net <span id="val-net">0</span></span>
+              <span class="pill">Goal <span id="val-goal">1650</span></span>
             </div>
           </div>
-
-          <div class="relative w-20 h-20 flex items-center justify-center shrink-0">
+          <div class="relative w-20 h-20 flex items-center justify-center">
             <svg class="w-full h-full -rotate-90">
               <circle cx="40" cy="40" r="34" stroke="#27272a" stroke-width="6" fill="transparent"></circle>
               <circle id="ring-progress" cx="40" cy="40" r="34" stroke="#3b82f6" stroke-width="6" fill="transparent" stroke-dasharray="214" stroke-dashoffset="214" stroke-linecap="round"></circle>
@@ -220,22 +135,21 @@
 
       <section class="grid grid-cols-2 gap-3 mb-4">
         <div class="card p-4">
-          <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Water</div>
-          <div class="text-lg font-black text-cyan-300 mono"><span id="val-water">0.0</span><span class="text-xs text-zinc-500">/3.0L</span></div>
+          <div class="text-[9px] font-black uppercase text-zinc-500">Water</div>
+          <div class="text-lg font-black text-cyan-300 mono"><span id="val-water">0.0</span>L</div>
           <div class="mt-3 flex gap-2">
-            <button class="btn-press flex-1 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200" onclick="Data.addWater(1)">+Glass</button>
-            <button class="btn-press px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200" onclick="Data.addWater(-1)">Undo</button>
+            <button class="btn-press flex-1 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black" onclick="Data.addWater(1)">+Glass</button>
+            <button class="btn-press px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black" onclick="Data.addWater(-1)">Undo</button>
           </div>
         </div>
-
-        <button class="btn-press card p-4 text-left" onclick="UI.openSheet('exercise')">
-          <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Active</div>
+        <button class="card p-4 text-left btn-press" onclick="UI.openSheet('exercise')">
+          <div class="text-[9px] font-black uppercase text-zinc-500">Active</div>
           <div class="text-lg font-black text-emerald-300 mono">+ <span id="val-burned">0</span></div>
-          <div class="mt-3 text-[10px] font-black text-zinc-500 uppercase">Tap to add</div>
+          <div class="mt-3 text-[10px] font-black text-zinc-500">Tap to add</div>
         </button>
       </section>
 
-      <section class="card-soft p-1 rounded-2xl flex border border-zinc-800 mb-4">
+      <section class="card-soft p-1 flex border border-zinc-800 mb-4">
         <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Breakfast')" id="btn-Breakfast">Breakfast</button>
         <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Lunch')" id="btn-Lunch">Lunch</button>
         <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Snack')" id="btn-Snack">Snack</button>
@@ -243,14 +157,26 @@
       </section>
 
       <section class="mb-4">
-        <div class="relative">
-          <input id="search-input" type="text" placeholder="Search food (egg, chicken...)" oninput="Foods.search()">
-          <i class="ph-bold ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500"></i>
-        </div>
+        <input id="search-input" type="text" placeholder="Search food..." oninput="Foods.search()">
         <div id="search-results" class="hidden flex flex-col gap-2 mt-3"></div>
       </section>
 
-      <section id="log-list" class="flex flex-col gap-2 mb-2"></section>
+      <section id="log-list" class="flex flex-col gap-2"></section>
+    </div>
+
+    <div id="view-trends" class="view">
+      <header class="mb-5 pt-1">
+        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Analytics</div>
+        <div class="text-2xl font-black text-white">Trends</div>
+      </header>
+      <section class="card p-5 mb-4">
+        <div class="text-sm font-black text-zinc-400 mb-4">Net Calories (Last 7 Days)</div>
+        <div class="h-48"><canvas id="chart-net"></canvas></div>
+      </section>
+      <section class="card p-5">
+        <div class="text-sm font-black text-zinc-400 mb-4">Weight Progress (kg)</div>
+        <div class="h-48"><canvas id="chart-weight"></canvas></div>
+      </section>
     </div>
 
     <div id="view-history" class="view">
@@ -258,24 +184,17 @@
         <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">History</div>
         <div class="text-2xl font-black text-white">Calendar</div>
       </header>
-      
-      <section class="card p-5 mb-4">
+      <section class="card p-5">
         <div id="calendar-body" class="grid grid-cols-7 gap-2"></div>
-        <div class="mt-4 text-[10px] text-zinc-500 uppercase font-black text-center tracking-widest">
-          Tap a day to edit or view logs
-        </div>
       </section>
     </div>
 
   </div>
 
   <nav id="nav-bar">
-    <button class="nav-btn active" onclick="UI.nav('home', this)">
-      <i class="ph-fill ph-house-line"></i><span>Home</span>
-    </button>
-    <button class="nav-btn" onclick="UI.nav('history', this)">
-      <i class="ph-fill ph-calendar-blank"></i><span>History</span>
-    </button>
+    <button class="nav-btn active" onclick="UI.nav('home', this)"><i class="ph-fill ph-house-line"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="UI.nav('trends', this)"><i class="ph-fill ph-chart-line-up"></i><span>Trends</span></button>
+    <button class="nav-btn" onclick="UI.nav('history', this)"><i class="ph-fill ph-calendar-blank"></i><span>History</span></button>
   </nav>
 
   <div id="backdrop" class="sheet-backdrop" onclick="UI.closeAllSheets()"></div>
@@ -289,57 +208,36 @@
       <button onclick="Sheet.adj(0.5)" class="w-12 h-12 flex items-center justify-center text-2xl font-black bg-zinc-800 rounded-xl">＋</button>
     </div>
     <div id="sheet-total" class="text-center text-5xl font-black text-blue-400 mb-8 mono">0 kcal</div>
-    <button onclick="Sheet.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">
-      Add to Log
-    </button>
+    <button onclick="Sheet.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase text-xs btn-press">Add to Log</button>
   </div>
 
   <div id="sheet-dayEditor" class="sheet">
     <div class="sheet-handle"></div>
-    <div class="flex items-start justify-between mb-4">
-      <div>
-        <div class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Day Editor</div>
-        <div id="edit-date-title" class="text-2xl font-black text-white">Date</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center" onclick="UI.closeAllSheets()">
-        <i class="ph-bold ph-x text-xl"></i>
-      </button>
-    </div>
+    <div id="edit-date-title" class="text-2xl font-black text-white mb-4">Date</div>
     <div id="edit-logs-list" class="flex flex-col gap-3 mb-6"></div>
-    <button onclick="UI.closeAllSheets()" class="w-full py-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-white font-black uppercase tracking-widest text-xs btn-press">
-      Finished
-    </button>
+    <button onclick="UI.closeAllSheets()" class="w-full py-4 rounded-3xl bg-zinc-900 text-white font-black uppercase text-xs btn-press">Close</button>
   </div>
 
   <div id="sheet-settings" class="sheet">
     <div class="sheet-handle"></div>
-    <div class="text-xl font-black text-white mb-4">Settings</div>
-    <div class="card p-4 mb-4">
-      <label class="text-[10px] font-black text-zinc-500 uppercase block mb-2">Daily Calorie Goal</label>
-      <input id="s-goal" type="number" placeholder="1650">
-    </div>
-    <button onclick="Settings.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">Save Settings</button>
+    <div class="text-xl font-black text-white mb-4">Goal</div>
+    <input id="s-goal" type="number" placeholder="1650" class="mb-6">
+    <button onclick="Settings.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase text-xs btn-press">Save</button>
   </div>
 
   <div id="sheet-quickWeight" class="sheet">
     <div class="sheet-handle"></div>
-    <div class="text-xl font-black text-white mb-4">Weight Log</div>
-    <input id="quick-weight" type="number" step="0.1" placeholder="Enter kg" class="mb-4">
-    <button onclick="Data.saveWeight()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">Save Weight</button>
+    <div class="text-xl font-black text-white mb-4">Log Weight</div>
+    <input id="quick-weight" type="number" step="0.1" placeholder="Enter kg" class="mb-6">
+    <button onclick="Data.saveWeight()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase text-xs btn-press">Save</button>
   </div>
 
   <div id="sheet-exercise" class="sheet">
     <div class="sheet-handle"></div>
-    <div class="text-xl font-black text-white mb-4">Add Activity</div>
+    <div class="text-xl font-black text-white mb-4">Burn</div>
     <div class="grid grid-cols-2 gap-3">
-      <button onclick="Data.addBurn(450)" class="card p-4 text-left btn-press">
-        <div class="text-emerald-400 font-black">Cricket</div>
-        <div class="text-xs text-zinc-500">+450 kcal</div>
-      </button>
-      <button onclick="Data.addBurn(350)" class="card p-4 text-left btn-press">
-        <div class="text-emerald-400 font-black">Tennis</div>
-        <div class="text-xs text-zinc-500">+350 kcal</div>
-      </button>
+      <button onclick="Data.addBurn(450)" class="card p-4 text-left btn-press text-emerald-400 font-black">Cricket (+450)</button>
+      <button onclick="Data.addBurn(350)" class="card p-4 text-left btn-press text-emerald-400 font-black">Tennis (+350)</button>
     </div>
   </div>
 
