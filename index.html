@@ -4,170 +4,169 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
-  <title>Mission 72 | Calorie Tracker</title>
+  <title>Mission 72 | Elite Calorie Tracker</title>
 
-  <!-- Tailwind + Icons + Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    /* Views */
+    /* View Visibility */
     .view { display: none; }
     .view.active-view { display: block !important; }
 
-    /* App shell */
-    body{
-      background:#000; color:#f4f4f5;
+    /* App Shell */
+    body {
+      background: #000;
+      color: #f4f4f5;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      height: 100dvh; width: 100vw;
-      display:flex; flex-direction:column;
-      overflow:hidden;
+      height: 100dvh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       -webkit-tap-highlight-color: transparent;
     }
-    #scroll-area{
-      flex:1;
-      overflow-y:auto;
+
+    #scroll-area {
+      flex: 1;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding: 18px 18px 40px 18px;
       z-index: 10;
     }
 
-    /* Bottom nav fixed */
-    #nav-bar{
+    /* Bottom Navigation */
+    #nav-bar {
       height: calc(78px + env(safe-area-inset-bottom));
-      background:#070709;
-      border-top:1px solid #27272a;
-      display:flex; justify-content:space-around; align-items:center;
+      background: #070709;
+      border-top: 1px solid #27272a;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
       padding-bottom: env(safe-area-inset-bottom);
-      flex-shrink:0;
+      flex-shrink: 0;
       z-index: 60;
     }
-    .nav-btn{
-      color:#52525b;
-      display:flex; flex-direction:column; align-items:center;
-      gap:4px;
-      font-weight:800;
-      font-size:9px;
-      width:25%;
-      transition: color .2s ease;
-      user-select:none;
-    }
-    .nav-btn i{ font-size: 22px; }
-    .nav-btn.active{ color:#fff; }
-    .nav-btn.active i{ color:#3b82f6; }
 
-    /* Cards */
-    .card{
-      background:#101012;
-      border:1px solid #27272a;
+    .nav-btn {
+      color: #52525b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-weight: 800;
+      font-size: 9px;
+      width: 25%;
+      transition: color .2s ease;
+      user-select: none;
+    }
+
+    .nav-btn i { font-size: 22px; }
+    .nav-btn.active { color: #fff; }
+    .nav-btn.active i { color: #3b82f6; }
+
+    /* Premium UI Components */
+    .card {
+      background: #101012;
+      border: 1px solid #27272a;
       border-radius: 24px;
     }
-    .card-soft{
-      background:#0b0b0d;
-      border:1px solid #27272a;
+
+    .card-soft {
+      background: #0b0b0d;
+      border: 1px solid #27272a;
       border-radius: 20px;
     }
-    .hair{ border:1px solid #27272a; }
-    ::-webkit-scrollbar{ display:none; }
-    .btn-press:active{ transform: scale(0.98); }
 
-    /* Sheet */
-    .sheet-backdrop{
-      position:fixed; inset:0;
-      background: rgba(0,0,0,0.78);
+    .btn-press:active { transform: scale(0.98); }
+
+    /* Bottom Sheets */
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
       z-index: 100;
-      display:none;
+      display: none;
     }
-    .sheet{
-      position:fixed; left:0; right:0; bottom:0;
-      background:#070709;
-      border-top:1px solid #27272a;
+
+    .sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #070709;
+      border-top: 1px solid #27272a;
       border-radius: 30px 30px 0 0;
       z-index: 101;
       padding: 18px;
       transform: translateY(105%);
       transition: transform .28s ease;
       max-height: 85vh;
-      overflow-y:auto;
-      -webkit-overflow-scrolling: touch;
+      overflow-y: auto;
     }
-    .sheet.open{ transform: translateY(0); }
-    .sheet-handle{
-      width:52px; height:5px;
-      border-radius:999px;
-      background: rgba(255,255,255,0.16);
+
+    .sheet.open { transform: translateY(0); }
+
+    .sheet-handle {
+      width: 52px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
       margin: 2px auto 12px auto;
     }
 
-    input, select{
-      background:#101012;
-      border:1px solid #27272a;
+    /* Form Elements */
+    input {
+      background: #101012;
+      border: 1px solid #27272a;
       border-radius: 14px;
-      padding: 12px 12px;
-      color:#fff;
-      outline:none;
-      width:100%;
-      font-size:14px;
+      padding: 12px;
+      color: #fff;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
     }
-    input::placeholder{ color: rgba(244,244,245,0.35); }
-    .pill{
-      border:1px solid #27272a;
-      border-radius:999px;
+
+    .pill {
+      border: 1px solid #27272a;
+      border-radius: 999px;
       padding: 6px 10px;
-      font-size:10px;
-      font-weight:800;
+      font-size: 10px;
+      font-weight: 800;
       letter-spacing: .12em;
       text-transform: uppercase;
-      color:#a1a1aa;
-      background:#0b0b0d;
-    }
-    .muted{ color:#a1a1aa; }
-    .muted2{ color:#71717a; }
-    .mono{ font-variant-numeric: tabular-nums; }
-
-    /* Macro progress bars */
-    .bar-wrap{
-      height: 8px;
-      background:#0b0b0d;
-      border:1px solid #27272a;
-      border-radius: 999px;
-      overflow:hidden;
-    }
-    .bar-fill{
-      height: 100%;
-      width: 0%;
-      border-radius: 999px;
-      transition: width .25s ease;
+      color: #a1a1aa;
+      background: #0b0b0d;
     }
 
-    /* Calendar grid */
-    .day-cell{
+    .mono { font-variant-numeric: tabular-nums; }
+
+    /* Calendar Grid */
+    .day-cell {
       aspect-ratio: 1 / 1;
       border-radius: 14px;
-      border:1px solid #27272a;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:900;
+      border: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
       font-size: 12px;
-      user-select:none;
     }
-    .day-cell.good{ background: rgba(16,185,129,0.12); color: rgb(110,231,183); border-color: rgba(16,185,129,0.22); }
-    .day-cell.bad{ background: rgba(239,68,68,0.12); color: rgb(252,165,165); border-color: rgba(239,68,68,0.22); }
-    .day-cell.neutral{ background: rgba(59,130,246,0.10); color: rgb(147,197,253); border-color: rgba(59,130,246,0.20); }
+
+    .day-cell.good { background: rgba(16, 185, 129, 0.12); color: rgb(110, 231, 183); border-color: rgba(16, 185, 129, 0.22); }
+    .day-cell.bad { background: rgba(239, 68, 68, 0.12); color: rgb(252, 165, 165); border-color: rgba(239, 68, 68, 0.22); }
+    .day-cell.selected { border: 2px solid #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+
+    ::-webkit-scrollbar { display: none; }
   </style>
 </head>
-
 <body>
 
-  <!-- Scrollable content -->
   <div id="scroll-area">
 
-    <!-- HOME -->
     <div id="view-home" class="view active-view">
-
-      <!-- Header -->
+      
       <header class="flex items-center justify-between mb-5 pt-1">
         <div class="flex items-center gap-3">
           <div class="w-11 h-11 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center">
@@ -175,27 +174,29 @@
           </div>
           <div>
             <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Mission 72</div>
-            <div class="text-lg font-black text-white" id="home-title-day">Today</div>
+            <div class="flex items-center gap-2">
+              <button onclick="Data.shiftDay(-1)" class="btn-press text-zinc-500 hover:text-white p-1">
+                <i class="ph-bold ph-caret-left"></i>
+              </button>
+              <div class="text-lg font-black text-white min-w-[100px] text-center" id="home-title-day">Today</div>
+              <button onclick="Data.shiftDay(1)" class="btn-press text-zinc-500 hover:text-white p-1">
+                <i class="ph-bold ph-caret-right"></i>
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="flex gap-2">
-          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-            onclick="UI.openSheet('settings')">
+          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300" onclick="UI.openSheet('settings')">
             <i class="ph-bold ph-gear text-xl"></i>
           </button>
-          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-blue-400"
-            onclick="UI.openSheet('quickWeight')">
+          <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-blue-400" onclick="UI.openSheet('quickWeight')">
             <i class="ph-bold ph-scales text-xl"></i>
           </button>
         </div>
       </header>
 
-      <!-- Hero -->
       <section class="card p-6 mb-4 relative overflow-hidden">
-        <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-blue-500/10 blur-2xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-emerald-500/10 blur-2xl"></div>
-
         <div class="relative z-10 flex items-center justify-between gap-4">
           <div>
             <div class="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">Remaining</div>
@@ -207,1635 +208,141 @@
             </div>
           </div>
 
-          <!-- Ring -->
           <div class="relative w-20 h-20 flex items-center justify-center shrink-0">
             <svg class="w-full h-full -rotate-90">
               <circle cx="40" cy="40" r="34" stroke="#27272a" stroke-width="6" fill="transparent"></circle>
-              <circle id="ring-progress" cx="40" cy="40" r="34" stroke="#3b82f6" stroke-width="6"
-                fill="transparent" stroke-dasharray="214" stroke-dashoffset="214" stroke-linecap="round"></circle>
+              <circle id="ring-progress" cx="40" cy="40" r="34" stroke="#3b82f6" stroke-width="6" fill="transparent" stroke-dasharray="214" stroke-dashoffset="214" stroke-linecap="round"></circle>
             </svg>
             <span class="absolute text-sm font-black mono" id="val-pct">0%</span>
           </div>
         </div>
       </section>
 
-      <!-- Quick Stats -->
       <section class="grid grid-cols-2 gap-3 mb-4">
-        <!-- Water with edit -->
         <div class="card p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Water</div>
-              <div class="text-lg font-black text-cyan-300 mono">
-                <span id="val-water">0.0</span><span class="text-xs text-zinc-500">/3.0L</span>
-              </div>
-            </div>
-            <i class="ph-bold ph-drop text-cyan-500 text-2xl opacity-40"></i>
-          </div>
+          <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Water</div>
+          <div class="text-lg font-black text-cyan-300 mono"><span id="val-water">0.0</span><span class="text-xs text-zinc-500">/3.0L</span></div>
           <div class="mt-3 flex gap-2">
-            <button class="btn-press flex-1 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-              onclick="Data.addWater(0.25)">+250ml</button>
-            <button class="btn-press py-2 px-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-              onclick="Data.undoWater(0.25)">Undo</button>
-            <button class="btn-press py-2 px-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-              onclick="Data.setWaterLiters()">Set</button>
+            <button class="btn-press flex-1 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200" onclick="Data.addWater(1)">+Glass</button>
+            <button class="btn-press px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200" onclick="Data.addWater(-1)">Undo</button>
           </div>
         </div>
 
-        <!-- Active -->
         <button class="btn-press card p-4 text-left" onclick="UI.openSheet('exercise')">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Active</div>
-              <div class="text-lg font-black text-emerald-300 mono">+ <span id="val-burned">0</span></div>
-            </div>
-            <i class="ph-bold ph-lightning text-emerald-500 text-2xl opacity-40"></i>
-          </div>
-          <div class="mt-3 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Tap to add</div>
+          <div class="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Active</div>
+          <div class="text-lg font-black text-emerald-300 mono">+ <span id="val-burned">0</span></div>
+          <div class="mt-3 text-[10px] font-black text-zinc-500 uppercase">Tap to add</div>
         </button>
       </section>
 
-      <!-- Macros + bars -->
-      <section class="card p-5 mb-4">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Macros</div>
-            <div class="text-base font-black text-white">Progress</div>
-          </div>
-          <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-            onclick="UI.openSheet('settings')">
-            Targets
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <i class="ph-bold ph-dumbbell text-zinc-400"></i>
-                <div class="text-xs font-black text-zinc-200">Protein</div>
-              </div>
-              <div class="text-xs font-black text-zinc-300 mono"><span id="curr-pro">0</span> / <span id="tgt-pro">130</span>g</div>
-            </div>
-            <div class="bar-wrap">
-              <div id="bar-pro" class="bar-fill" style="background: rgba(16,185,129,0.9);"></div>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <i class="ph-bold ph-bread text-zinc-400"></i>
-                <div class="text-xs font-black text-zinc-200">Carbs</div>
-              </div>
-              <div class="text-xs font-black text-zinc-300 mono"><span id="curr-carb">0</span> / <span id="tgt-carb">170</span>g</div>
-            </div>
-            <div class="bar-wrap">
-              <div id="bar-carb" class="bar-fill" style="background: rgba(59,130,246,0.9);"></div>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <i class="ph-bold ph-fire text-zinc-400"></i>
-                <div class="text-xs font-black text-zinc-200">Fat</div>
-              </div>
-              <div class="text-xs font-black text-zinc-300 mono"><span id="curr-fat">0</span> / <span id="tgt-fat">55</span>g</div>
-            </div>
-            <div class="bar-wrap">
-              <div id="bar-fat" class="bar-fill" style="background: rgba(244,63,94,0.88);"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Meal tabs -->
       <section class="card-soft p-1 rounded-2xl flex border border-zinc-800 mb-4">
-        <button class="flex-1 py-3 text-[10px] font-black text-white bg-zinc-800 rounded-xl" onclick="App.setMeal('Breakfast')" id="btn-Breakfast">Breakfast</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Lunch')" id="btn-Lunch">Lunch</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Snack')" id="btn-Snack">Snack</button>
-        <button class="flex-1 py-3 text-[10px] font-black text-zinc-500" onclick="App.setMeal('Dinner')" id="btn-Dinner">Dinner</button>
+        <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Breakfast')" id="btn-Breakfast">Breakfast</button>
+        <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Lunch')" id="btn-Lunch">Lunch</button>
+        <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Snack')" id="btn-Snack">Snack</button>
+        <button class="flex-1 py-3 text-[10px] font-black" onclick="App.setMeal('Dinner')" id="btn-Dinner">Dinner</button>
       </section>
 
-      <!-- Search -->
       <section class="mb-4">
         <div class="relative">
-          <input id="search-input" type="text" placeholder="Search food (egg, rice, roti, dal...)"
-            oninput="Foods.search()">
-          <i class="ph-bold ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-lg"></i>
+          <input id="search-input" type="text" placeholder="Search food (egg, chicken...)" oninput="Foods.search()">
+          <i class="ph-bold ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500"></i>
         </div>
         <div id="search-results" class="hidden flex flex-col gap-2 mt-3"></div>
       </section>
 
-      <!-- Log list -->
-      <section class="mb-2">
-        <div class="flex items-center justify-between mb-2 px-1">
-          <div>
-            <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500" id="meal-title">Breakfast</div>
-            <div class="text-xl font-black text-white">Log</div>
-          </div>
-          <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-            onclick="Actions.clearTodayPrompt()">
-            Reset Today
-          </button>
-        </div>
-        <div id="log-list" class="flex flex-col gap-2"></div>
-      </section>
-
+      <section id="log-list" class="flex flex-col gap-2 mb-2"></section>
     </div>
 
-    <!-- TRENDS -->
-    <div id="view-trends" class="view">
-      <header class="flex items-center justify-between mb-5 pt-1">
-        <div>
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Trends</div>
-          <div class="text-2xl font-black text-white">Insights</div>
-        </div>
-        <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-          onclick="UI.openSheet('settings')">
-          <i class="ph-bold ph-sliders text-xl"></i>
-        </button>
-      </header>
-
-      <!-- Range toggle -->
-      <div class="card-soft p-1 rounded-2xl flex border border-zinc-800 mb-4">
-        <button id="range-day" class="flex-1 py-3 text-[10px] font-black text-white bg-zinc-800 rounded-xl"
-          onclick="Trends.setRange('day')">Day</button>
-        <button id="range-week" class="flex-1 py-3 text-[10px] font-black text-zinc-500"
-          onclick="Trends.setRange('week')">Week</button>
-        <button id="range-month" class="flex-1 py-3 text-[10px] font-black text-zinc-500"
-          onclick="Trends.setRange('month')">Month</button>
-      </div>
-
-      <section class="card p-5 mb-4">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-black text-white">Net Calories</div>
-          <div class="text-xs font-black text-zinc-500 uppercase tracking-widest" id="trend-subtitle">Last 14 days</div>
-        </div>
-        <div class="h-52"><canvas id="chart-net"></canvas></div>
-      </section>
-
-      <section class="card p-5 mb-4">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-black text-white">Macros</div>
-          <div class="text-xs font-black text-zinc-500 uppercase tracking-widest" id="macro-subtitle">Totals</div>
-        </div>
-        <div class="h-52"><canvas id="chart-macros"></canvas></div>
-      </section>
-
-      <section class="card p-5">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-black text-white">Weight</div>
-          <div class="text-xs font-black text-zinc-500 uppercase tracking-widest">If logged</div>
-        </div>
-        <div class="h-52"><canvas id="chart-weight"></canvas></div>
-      </section>
-    </div>
-
-    <!-- HISTORY -->
     <div id="view-history" class="view">
-      <header class="flex items-center justify-between mb-5 pt-1">
-        <div>
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">History</div>
-          <div class="text-2xl font-black text-white">Days</div>
-        </div>
-        <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-          onclick="UI.openSheet('dayPick')">
-          Jump
-        </button>
+      <header class="mb-5 pt-1">
+        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">History</div>
+        <div class="text-2xl font-black text-white">Calendar</div>
       </header>
-
+      
       <section class="card p-5 mb-4">
-        <div class="flex items-center justify-between mb-4">
-          <div class="text-sm font-black text-white">This month</div>
-          <div class="text-xs font-black text-zinc-500 uppercase tracking-widest" id="history-month-label">—</div>
-        </div>
         <div id="calendar-body" class="grid grid-cols-7 gap-2"></div>
-        <div class="mt-4 text-xs text-zinc-500">
-          Tap any day to edit logs, water, active calories, and weight.
-        </div>
-      </section>
-
-      <section class="card p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm font-black text-white">Backups</div>
-            <div class="text-xs text-zinc-500 mt-1">Your data is stored locally in this browser (localStorage).</div>
-          </div>
-          <div class="flex gap-2">
-            <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-              onclick="Backup.export()">
-              Export
-            </button>
-            <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-              onclick="Backup.import()">
-              Import
-            </button>
-          </div>
+        <div class="mt-4 text-[10px] text-zinc-500 uppercase font-black text-center tracking-widest">
+          Tap a day to edit or view logs
         </div>
       </section>
     </div>
 
-    <!-- LIBRARY -->
-    <div id="view-library" class="view">
-      <header class="flex items-center justify-between mb-5 pt-1">
-        <div>
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Library</div>
-          <div class="text-2xl font-black text-white">Foods</div>
-        </div>
-        <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-          onclick="UI.openSheet('customFood')">
-          Add
-        </button>
-      </header>
-
-      <section class="card p-5 mb-4">
-        <input id="library-search" type="text" placeholder="Search saved foods..."
-          oninput="Library.render()">
-        <div class="mt-3 text-xs text-zinc-500">
-          Tap a food to add it to your current meal. Use ★ to save from search.
-        </div>
-      </section>
-
-      <div id="library-list" class="space-y-2"></div>
-    </div>
   </div>
 
-  <!-- Bottom Nav -->
   <nav id="nav-bar">
-    <button class="nav-btn active" onclick="UI.nav('home', this)"><i class="ph-fill ph-house"></i><span>Home</span></button>
-    <button class="nav-btn" onclick="UI.nav('trends', this)"><i class="ph-fill ph-chart-line-up"></i><span>Trends</span></button>
-    <button class="nav-btn" onclick="UI.nav('history', this)"><i class="ph-fill ph-calendar"></i><span>History</span></button>
-    <button class="nav-btn" onclick="UI.nav('library', this)"><i class="ph-fill ph-books"></i><span>Library</span></button>
+    <button class="nav-btn active" onclick="UI.nav('home', this)">
+      <i class="ph-fill ph-house-line"></i><span>Home</span>
+    </button>
+    <button class="nav-btn" onclick="UI.nav('history', this)">
+      <i class="ph-fill ph-calendar-blank"></i><span>History</span>
+    </button>
   </nav>
 
-  <!-- Sheets -->
   <div id="backdrop" class="sheet-backdrop" onclick="UI.closeAllSheets()"></div>
 
-  <!-- Food Sheet -->
   <div id="sheet-food" class="sheet">
     <div class="sheet-handle"></div>
-
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div class="min-w-0">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500" id="sheet-mode">Add</div>
-        <div class="text-xl font-black text-white truncate" id="sheet-name">Food</div>
-        <div class="text-xs text-zinc-500 mt-1" id="sheet-meta">per serving</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
+    <div id="sheet-name" class="text-xl font-black text-white mb-4">Food</div>
+    <div class="flex items-center justify-between bg-zinc-900 rounded-2xl p-4 mb-6">
+      <button onclick="Sheet.adj(-0.5)" class="w-12 h-12 flex items-center justify-center text-2xl font-black bg-zinc-800 rounded-xl">－</button>
+      <div id="sheet-qty" class="text-4xl font-black mono">1.0</div>
+      <button onclick="Sheet.adj(0.5)" class="w-12 h-12 flex items-center justify-center text-2xl font-black bg-zinc-800 rounded-xl">＋</button>
     </div>
-
-    <div class="card-soft p-2 flex items-center justify-between mb-4">
-      <button class="btn-press w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl"
-        onclick="Sheet.adj(-0.5)">−</button>
-      <div class="text-4xl font-black mono" id="sheet-qty">1.0</div>
-      <button class="btn-press w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center text-white text-xl"
-        onclick="Sheet.adj(0.5)">+</button>
-    </div>
-
-    <div class="text-center mb-4">
-      <div class="text-5xl font-black text-blue-400 mono" id="sheet-total">0 kcal</div>
-      <div class="text-sm font-black text-zinc-500 mt-1" id="sheet-macros">P0 · C0 · F0</div>
-    </div>
-
-    <div class="flex gap-2">
-      <button class="btn-press flex-1 py-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-white font-black uppercase tracking-widest text-xs"
-        onclick="Sheet.save()">
-        Save
-      </button>
-      <button class="btn-press w-16 py-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-white font-black"
-        onclick="Sheet.deleteIfEditing()" title="Delete (edit mode only)">
-        <i class="ph-bold ph-trash text-xl"></i>
-      </button>
-    </div>
-
-    <div class="mt-3 text-xs text-zinc-500">
-      Tip: Tap a logged item to edit quantity or delete.
-    </div>
-  </div>
-
-  <!-- Settings Sheet -->
-  <div id="sheet-settings" class="sheet">
-    <div class="sheet-handle"></div>
-
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Settings</div>
-        <div class="text-xl font-black text-white">Targets</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
-    </div>
-
-    <div class="space-y-3">
-      <div class="card p-4">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Daily Calories</div>
-        <input id="s-goal" type="number" placeholder="1650">
-        <div class="mt-3 flex gap-2">
-          <button class="btn-press flex-1 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs font-black text-zinc-200"
-            onclick="Settings.preset(1650)">1650</button>
-          <button class="btn-press flex-1 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs font-black text-zinc-200"
-            onclick="Settings.preset(1900)">1900</button>
-          <button class="btn-press flex-1 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs font-black text-zinc-200"
-            onclick="Settings.preset(2200)">2200</button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2">
-        <div class="card p-4">
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Protein</div>
-          <input id="s-pro" type="number" placeholder="130">
-        </div>
-        <div class="card p-4">
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Carbs</div>
-          <input id="s-carb" type="number" placeholder="170">
-        </div>
-        <div class="card p-4">
-          <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Fat</div>
-          <input id="s-fat" type="number" placeholder="55">
-        </div>
-      </div>
-
-      <button class="btn-press w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs"
-        onclick="Settings.save()">
-        Save Settings
-      </button>
-
-      <button class="btn-press w-full py-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-red-400 font-black uppercase tracking-widest text-xs"
-        onclick="Actions.factoryReset()">
-        Factory Reset
-      </button>
-    </div>
-  </div>
-
-  <!-- Exercise Sheet -->
-  <div id="sheet-exercise" class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Add Activity</div>
-        <div class="text-xl font-black text-white">Burn</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3">
-      <button class="btn-press card p-4 text-left font-black text-emerald-300" onclick="Data.addBurn(450); UI.closeAllSheets();">🏏 Cricket <span class="block text-xs text-zinc-500 mt-1">+450</span></button>
-      <button class="btn-press card p-4 text-left font-black text-emerald-300" onclick="Data.addBurn(350); UI.closeAllSheets();">🎾 Tennis <span class="block text-xs text-zinc-500 mt-1">+350</span></button>
-      <button class="btn-press card p-4 text-left font-black text-emerald-300" onclick="Data.addBurn(500); UI.closeAllSheets();">🥾 Hiking <span class="block text-xs text-zinc-500 mt-1">+500</span></button>
-      <button class="btn-press card p-4 text-left font-black text-emerald-300" onclick="Data.customBurnPrompt()">⚡ Custom <span class="block text-xs text-zinc-500 mt-1">Enter kcal</span></button>
-    </div>
-
-    <div class="mt-4 card p-4">
-      <div class="text-xs text-zinc-500">Tip: Burn reduces your net calories (Net = Eaten - Burn).</div>
-    </div>
-  </div>
-
-  <!-- Quick Weight Sheet -->
-  <div id="sheet-quickWeight" class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Weight</div>
-        <div class="text-xl font-black text-white">Log</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
-    </div>
-
-    <div class="card p-4 mb-3">
-      <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Today (kg)</div>
-      <input id="quick-weight" type="number" step="0.1" placeholder="e.g., 79.6">
-    </div>
-
-    <button class="btn-press w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs"
-      onclick="Data.saveWeightForToday()">
-      Save Weight
+    <div id="sheet-total" class="text-center text-5xl font-black text-blue-400 mb-8 mono">0 kcal</div>
+    <button onclick="Sheet.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">
+      Add to Log
     </button>
   </div>
 
-  <!-- Custom Food Sheet -->
-  <div id="sheet-customFood" class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Custom Food</div>
-        <div class="text-xl font-black text-white">Create</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
-    </div>
-
-    <div class="space-y-3">
-      <input id="c-name" placeholder="Name (e.g., Homemade Upma)">
-      <input id="c-unit" placeholder="Serving (e.g., 1 bowl)">
-      <div class="grid grid-cols-2 gap-2">
-        <input id="c-kcal" type="number" placeholder="Calories">
-        <input id="c-pro" type="number" step="0.1" placeholder="Protein (g)">
-        <input id="c-carb" type="number" step="0.1" placeholder="Carbs (g)">
-        <input id="c-fat" type="number" step="0.1" placeholder="Fat (g)">
-      </div>
-
-      <button class="btn-press w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs"
-        onclick="Library.addCustomFood()">
-        Save to Library
-      </button>
-    </div>
-  </div>
-
-  <!-- Day Picker Sheet -->
-  <div id="sheet-dayPick" class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Jump</div>
-        <div class="text-xl font-black text-white">Open a date</div>
-      </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
-    </div>
-    <div class="card p-4 mb-3">
-      <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Date (YYYY-MM-DD)</div>
-      <input id="pick-date" placeholder="2026-01-22">
-    </div>
-    <button class="btn-press w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs"
-      onclick="History.openPickedDate()">
-      Open
-    </button>
-  </div>
-
-  <!-- Day Editor Sheet -->
   <div id="sheet-dayEditor" class="sheet">
     <div class="sheet-handle"></div>
-
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div class="min-w-0">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Edit Day</div>
-        <div class="text-xl font-black text-white truncate mono" id="edit-date-title">—</div>
-        <div class="text-xs text-zinc-500 mt-1" id="edit-day-summary">—</div>
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <div class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Day Editor</div>
+        <div id="edit-date-title" class="text-2xl font-black text-white">Date</div>
       </div>
-      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center text-zinc-300"
-        onclick="UI.closeAllSheets()"><i class="ph-bold ph-x text-xl"></i></button>
+      <button class="btn-press w-10 h-10 rounded-full card flex items-center justify-center" onclick="UI.closeAllSheets()">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
     </div>
-
-    <div class="grid grid-cols-3 gap-2 mb-3">
-      <div class="card p-4">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Water (L)</div>
-        <input id="edit-water" type="number" step="0.1" placeholder="0.0">
-      </div>
-      <div class="card p-4">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Burn</div>
-        <input id="edit-burn" type="number" placeholder="0">
-      </div>
-      <div class="card p-4">
-        <div class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500 mb-2">Weight</div>
-        <input id="edit-weight" type="number" step="0.1" placeholder="—">
-      </div>
-    </div>
-
-    <button class="btn-press w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs mb-4"
-      onclick="History.saveDayEdits()">
-      Save Day Changes
+    <div id="edit-logs-list" class="flex flex-col gap-3 mb-6"></div>
+    <button onclick="UI.closeAllSheets()" class="w-full py-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-white font-black uppercase tracking-widest text-xs btn-press">
+      Finished
     </button>
-
-    <div class="card p-4 mb-3">
-      <div class="flex items-center justify-between">
-        <div class="text-sm font-black text-white">Logs</div>
-        <button class="btn-press px-3 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-200"
-          onclick="History.clearLogsForEditingDay()">
-          Clear Logs
-        </button>
-      </div>
-      <div class="text-xs text-zinc-500 mt-1">Tap an item to edit (opens food editor). Use trash to delete.</div>
-    </div>
-
-    <div id="edit-logs-list" class="space-y-2"></div>
   </div>
 
-  <script>
-    /***********************
-     * DATA + STORAGE
-     ***********************/
-    const STORAGE_KEY = "m72_singlefile_v3";
-
-    const DB_BASE = [
-      {id:'egg',   n:'Boiled Egg',      u:'1 large', c:78,  p:6,  cb:0.6, f:5},
-      {id:'chick', n:'Chicken Breast',  u:'150g',    c:250, p:45, cb:0,   f:6},
-      {id:'rice',  n:'White Rice',      u:'1 cup',   c:205, p:4.3,cb:44.5,f:0.4},
-      {id:'roti',  n:'Roti / Chapati',  u:'1 pc',    c:70,  p:3,  cb:15,  f:0.5},
-      {id:'dal',   n:'Dal',             u:'1 bowl',  c:260, p:12, cb:30,  f:10},
-      {id:'paneer',n:'Paneer',          u:'100g',    c:265, p:18, cb:4,   f:20},
-      {id:'banana',n:'Banana',          u:'1 medium',c:105, p:1.3,cb:27,  f:0.4},
-      {id:'apple', n:'Apple',           u:'1 medium',c:95,  p:0.5,cb:25,  f:0.3},
-      {id:'yog',   n:'Greek Yogurt',    u:'1 cup',   c:130, p:12, cb:8,   f:0},
-      {id:'pb',    n:'Peanut Butter',   u:'1 tbsp',  c:94,  p:4,  cb:3.5, f:8}
-    ];
-
-    const Utils = {
-      todayKey(){ return new Date().toISOString().slice(0,10); },
-      clamp(n,min,max){ return Math.max(min, Math.min(max, n)); },
-      n(x){ const v = Number(x); return isFinite(v) ? v : 0; },
-      r0(x){ return Math.round(Utils.n(x)); },
-      r1(x){ return Math.round(Utils.n(x)*10)/10; },
-      id(){ return (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2); },
-      norm(s){
-        return String(s||"").toLowerCase().replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
-      },
-      fmtShortDate(iso){
-        const d = new Date(iso+"T00:00:00");
-        return d.toLocaleDateString([], {month:'short', day:'numeric'});
-      },
-      monthLabel(){
-        const d = new Date();
-        return d.toLocaleDateString([], {month:'long', year:'numeric'});
-      }
-    };
-
-    const App = {
-      state: null,
-
-      defaultState(){
-        return {
-          settings: { goal: 1650, pro: 130, carb: 170, fat: 55 },
-          meal: "Breakfast",
-          favorites: [],      // food ids
-          customFoods: [],    // food objects
-          days: {},           // date -> { logs:[], burn:0, waterLiters:0 }
-          weightHistory: {}   // date -> kg
-        };
-      },
-
-      load(){
-        try{
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if(!raw) return this.defaultState();
-          const s = JSON.parse(raw);
-          return this.migrate(s);
-        }catch{
-          return this.defaultState();
-        }
-      },
-
-      save(){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-      },
-
-      migrate(s){
-        s ||= this.defaultState();
-        s.settings ||= { goal:1650, pro:130, carb:170, fat:55 };
-        s.meal ||= "Breakfast";
-        s.favorites ||= [];
-        s.customFoods ||= [];
-        s.days ||= {};
-        s.weightHistory ||= {};
-
-        // Back-compat: old "water" step counter -> liters
-        for(const k in s.days){
-          const d = s.days[k];
-          if(!d) continue;
-          if(d.waterLiters === undefined && d.water !== undefined){
-            d.waterLiters = Utils.n(d.water) * 0.25;
-            delete d.water;
-          }
-          d.logs ||= [];
-          d.burn = Utils.n(d.burn || 0);
-          d.waterLiters = Utils.n(d.waterLiters || 0);
-        }
-        return s;
-      },
-
-      init(){
-        this.state = this.load();
-        this.ensureToday();
-        this.setMeal(this.state.meal, true);
-        Render.all();
-      },
-
-      ensureToday(){
-        const k = Utils.todayKey();
-        if(!this.state.days[k]) this.state.days[k] = { logs:[], burn:0, waterLiters:0 };
-        // ensure shape
-        this.state.days[k].logs ||= [];
-        this.state.days[k].burn = Utils.n(this.state.days[k].burn || 0);
-        this.state.days[k].waterLiters = Utils.n(this.state.days[k].waterLiters || 0);
-      },
-
-      getDay(dateKey){
-        if(!this.state.days[dateKey]) this.state.days[dateKey] = { logs:[], burn:0, waterLiters:0 };
-        this.state.days[dateKey].logs ||= [];
-        this.state.days[dateKey].burn = Utils.n(this.state.days[dateKey].burn || 0);
-        this.state.days[dateKey].waterLiters = Utils.n(this.state.days[dateKey].waterLiters || 0);
-        return this.state.days[dateKey];
-      },
-
-      today(){
-        return this.getDay(Utils.todayKey());
-      },
-
-      setMeal(meal, skipSave){
-        this.state.meal = meal;
-        ["Breakfast","Lunch","Snack","Dinner"].forEach(m=>{
-          const el = document.getElementById("btn-"+m);
-          if(!el) return;
-          const active = (m===meal);
-          el.classList.toggle("text-white", active);
-          el.classList.toggle("bg-zinc-800", active);
-          el.classList.toggle("rounded-xl", active);
-          el.classList.toggle("text-zinc-500", !active);
-        });
-        document.getElementById("meal-title").innerText = meal;
-        if(!skipSave) this.save();
-        Render.list();
-      },
-
-      allFoods(){
-        // de-dupe by id (custom overrides)
-        const map = new Map();
-        (this.state.customFoods || []).forEach(f=>map.set(f.id,f));
-        DB_BASE.forEach(f=>{ if(!map.has(f.id)) map.set(f.id,f); });
-        return Array.from(map.values());
-      }
-    };
-
-    /***********************
-     * UI NAV + SHEETS
-     ***********************/
-    const UI = {
-      nav(which, btn){
-        document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-
-        document.querySelectorAll(".view").forEach(v=>v.classList.remove("active-view"));
-        document.getElementById("view-"+which).classList.add("active-view");
-
-        // render view-specific
-        if(which === "trends") Trends.render();
-        if(which === "history") History.renderCalendar();
-        if(which === "library") Library.render();
-        // scroll top for cleaner feel
-        document.getElementById("scroll-area").scrollTop = 0;
-      },
-
-      openSheet(name){
-        document.getElementById("backdrop").style.display = "block";
-        document.getElementById("sheet-"+name).classList.add("open");
-
-        if(name === "settings") Settings.refresh();
-        if(name === "quickWeight") Data.prefillWeightSheet();
-        if(name === "dayPick") document.getElementById("pick-date").value = Utils.todayKey();
-      },
-
-      closeAllSheets(){
-        document.getElementById("backdrop").style.display = "none";
-        document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("open"));
-      }
-    };
-
-    /***********************
-     * RENDER
-     ***********************/
-    const Render = {
-      totalsForDay(day){
-        const logs = day.logs || [];
-        let eaten=0, p=0, cb=0, f=0;
-        logs.forEach(l=>{
-          eaten += Utils.n(l.c);
-          p += Utils.n(l.p);
-          cb += Utils.n(l.cb);
-          f += Utils.n(l.f);
-        });
-        const burn = Utils.n(day.burn);
-        const net = eaten - burn;
-        return { eaten, burn, net, p, cb, f };
-      },
-
-      all(){
-        App.ensureToday();
-
-        const day = App.today();
-        const t = this.totalsForDay(day);
-
-        const goal = Utils.n(App.state.settings.goal);
-        document.getElementById("val-goal").innerText = Utils.r0(goal);
-
-        const remaining = Math.max(0, goal - t.net);
-        document.getElementById("val-rem").innerText = Utils.r0(remaining);
-        document.getElementById("val-net").innerText = Utils.r0(t.net);
-        document.getElementById("val-burned").innerText = Utils.r0(t.burn);
-
-        // water
-        document.getElementById("val-water").innerText = Utils.r1(day.waterLiters || 0).toFixed(1);
-
-        // ring
-        const pct = goal > 0 ? Utils.clamp((t.net/goal)*100, 0, 120) : 0;
-        document.getElementById("val-pct").innerText = Utils.r0(Math.min(100,pct)) + "%";
-        const circ = 214;
-        document.getElementById("ring-progress").style.strokeDashoffset = (circ - (circ * Math.min(100,pct)/100));
-
-        // macros
-        const sp = Utils.n(App.state.settings.pro);
-        const sc = Utils.n(App.state.settings.carb);
-        const sf = Utils.n(App.state.settings.fat);
-
-        document.getElementById("curr-pro").innerText = Utils.r0(t.p);
-        document.getElementById("curr-carb").innerText = Utils.r0(t.cb);
-        document.getElementById("curr-fat").innerText = Utils.r0(t.f);
-
-        document.getElementById("tgt-pro").innerText = Utils.r0(sp);
-        document.getElementById("tgt-carb").innerText = Utils.r0(sc);
-        document.getElementById("tgt-fat").innerText = Utils.r0(sf);
-
-        document.getElementById("bar-pro").style.width = (sp>0 ? Utils.clamp((t.p/sp)*100,0,100) : 0) + "%";
-        document.getElementById("bar-carb").style.width = (sc>0 ? Utils.clamp((t.cb/sc)*100,0,100) : 0) + "%";
-        document.getElementById("bar-fat").style.width = (sf>0 ? Utils.clamp((t.f/sf)*100,0,100) : 0) + "%";
-
-        // header weight
-        const todayKey = Utils.todayKey();
-        const w = App.state.weightHistory[todayKey];
-        if(w !== undefined) document.getElementById("header-weight").innerText = Utils.r1(w).toFixed(1);
-        else {
-          // show last logged
-          const keys = Object.keys(App.state.weightHistory).sort();
-          document.getElementById("header-weight").innerText = keys.length ? Utils.r1(App.state.weightHistory[keys[keys.length-1]]).toFixed(1) : "--";
-        }
-
-        this.list();
-      },
-
-      list(){
-        const day = App.today();
-        const items = (day.logs || []).filter(l => l.meal === App.state.meal);
-
-        const container = document.getElementById("log-list");
-        if(!items.length){
-          container.innerHTML = `
-            <div class="card p-5 text-center">
-              <div class="text-sm font-black text-white">Nothing logged</div>
-              <div class="text-xs text-zinc-500 mt-1">Search above and add foods.</div>
-            </div>
-          `;
-          return;
-        }
-
-        container.innerHTML = items.map(l => {
-          const kcal = Utils.r0(l.c);
-          const qty = Utils.n(l.qty || 1);
-          return `
-            <button class="btn-press card p-4 text-left" onclick="Sheet.openEdit('${l.id}', '${Utils.todayKey()}')">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="text-white font-black text-base truncate">
-                    ${escapeHtml(l.n)} <span class="text-zinc-500 font-black text-xs">× ${qty.toFixed(2).replace(/\.00$/,'')}</span>
-                  </div>
-                  <div class="text-[11px] text-zinc-500 mt-1">
-                    ${escapeHtml(l.u || "serving")} · P${Utils.r0(l.p)} C${Utils.r0(l.cb)} F${Utils.r0(l.f)}
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-blue-400 font-black text-lg mono">${kcal}</div>
-                  <div class="text-[10px] font-black uppercase tracking-widest text-zinc-500">kcal</div>
-                </div>
-              </div>
-            </button>
-          `;
-        }).join("");
-      }
-    };
-
-    /***********************
-     * FOODS SEARCH
-     ***********************/
-    const Foods = {
-      search(){
-        const q = Utils.norm(document.getElementById("search-input").value);
-        const res = document.getElementById("search-results");
-        if(!q){
-          res.classList.add("hidden");
-          res.innerHTML = "";
-          return;
-        }
-
-        const all = App.allFoods();
-        const favs = new Set(App.state.favorites || []);
-
-        const hits = all
-          .map(f => ({ f, score: scoreFood(q, f) }))
-          .filter(x => x.score > 0)
-          .sort((a,b)=>b.score-a.score)
-          .slice(0, 10)
-          .map(x=>x.f);
-
-        res.classList.remove("hidden");
-        res.innerHTML = hits.map(f=>{
-          const isFav = favs.has(f.id);
-          return `
-            <div class="card p-4 flex items-center justify-between gap-3">
-              <button class="btn-press flex-1 text-left" onclick="Sheet.openAdd('${f.id}')">
-                <div class="text-white font-black">${escapeHtml(f.n)}</div>
-                <div class="text-xs text-zinc-500 mt-1">${escapeHtml(f.u)} · ${Utils.r0(f.c)} kcal · P${Utils.r1(f.p)} C${Utils.r1(f.cb)} F${Utils.r1(f.f)}</div>
-              </button>
-              <button class="btn-press w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white"
-                onclick="event.stopPropagation(); Library.toggleFavorite('${f.id}')">
-                <span class="text-xl">${isFav ? "★" : "☆"}</span>
-              </button>
-            </div>
-          `;
-        }).join("") || `
-          <div class="card p-5 text-center">
-            <div class="text-sm font-black text-white">No match</div>
-            <div class="text-xs text-zinc-500 mt-1">Try a different keyword.</div>
-          </div>
-        `;
-      }
-    };
-
-    function scoreFood(q, f){
-      const name = Utils.norm(f.n);
-      const unit = Utils.norm(f.u || "");
-      if(name.startsWith(q)) return 100;
-      if(name.includes(q)) return 70;
-      if(unit.includes(q)) return 40;
-      // token overlap
-      const qt = new Set(q.split(" "));
-      const nt = new Set(name.split(" "));
-      let overlap=0;
-      qt.forEach(t=>{ if(nt.has(t)) overlap++; });
-      return overlap ? 30 + overlap*5 : 0;
-    }
-
-    /***********************
-     * FOOD SHEET (ADD/EDIT)
-     ***********************/
-    const Sheet = {
-      mode: "add",
-      currFood: null,
-      qty: 1,
-      editLogId: null,
-      editDateKey: null,
-
-      openAdd(foodId){
-        const f = App.allFoods().find(x=>x.id===foodId);
-        if(!f) return;
-
-        this.mode = "add";
-        this.currFood = f;
-        this.qty = 1;
-        this.editLogId = null;
-        this.editDateKey = Utils.todayKey();
-
-        document.getElementById("sheet-mode").innerText = "Add";
-        document.getElementById("sheet-name").innerText = f.n;
-        document.getElementById("sheet-meta").innerText = `${Utils.r0(f.c)} kcal · P${Utils.r1(f.p)} C${Utils.r1(f.cb)} F${Utils.r1(f.f)} per ${f.u}`;
-
-        this.render();
-        UI.openSheet("food");
-      },
-
-      openEdit(logId, dateKey){
-        const day = App.getDay(dateKey);
-        const log = (day.logs||[]).find(x=>x.id===logId);
-        if(!log) return;
-
-        this.mode = "edit";
-        this.editLogId = logId;
-        this.editDateKey = dateKey;
-
-        // Build a food-like from log
-        const q = Utils.n(log.qty || 1);
-        this.qty = q;
-        this.currFood = {
-          id: log.foodId || "custom_log",
-          n: log.n,
-          u: log.u || "serving",
-          c: Utils.n(log.c) / q,
-          p: Utils.n(log.p) / q,
-          cb: Utils.n(log.cb) / q,
-          f: Utils.n(log.f) / q
-        };
-
-        document.getElementById("sheet-mode").innerText = "Edit";
-        document.getElementById("sheet-name").innerText = log.n;
-        document.getElementById("sheet-meta").innerText = `Editing · ${escapeHtml(log.meal)} · ${escapeHtml(log.u || "serving")}`;
-
-        this.render();
-        UI.openSheet("food");
-      },
-
-      render(){
-        const f = this.currFood;
-        const q = Utils.n(this.qty);
-
-        document.getElementById("sheet-qty").innerText = q.toFixed(1).replace(/\.0$/,".0");
-        const kcal = Utils.r0(Utils.n(f.c) * q);
-        const p = Utils.r0(Utils.n(f.p) * q);
-        const cb = Utils.r0(Utils.n(f.cb) * q);
-        const fat = Utils.r0(Utils.n(f.f) * q);
-
-        document.getElementById("sheet-total").innerText = `${kcal} kcal`;
-        document.getElementById("sheet-macros").innerText = `P${p} · C${cb} · F${fat}`;
-      },
-
-      adj(delta){
-        this.qty = Utils.clamp(Utils.n(this.qty) + Utils.n(delta), 0.5, 50);
-        this.qty = Math.round(this.qty * 2) / 2; // 0.5 steps
-        this.render();
-      },
-
-      save(){
-        const f = this.currFood;
-        const q = Utils.n(this.qty);
-
-        const dateKey = this.editDateKey || Utils.todayKey();
-        const day = App.getDay(dateKey);
-
-        if(this.mode === "edit" && this.editLogId){
-          const idx = (day.logs||[]).findIndex(x=>x.id===this.editLogId);
-          if(idx >= 0){
-            const old = day.logs[idx];
-            day.logs[idx] = {
-              ...old,
-              qty: q,
-              c: Utils.n(f.c) * q,
-              p: Utils.n(f.p) * q,
-              cb: Utils.n(f.cb) * q,
-              f: Utils.n(f.f) * q
-            };
-          }
-        }else{
-          day.logs.unshift({
-            id: Utils.id(),
-            meal: App.state.meal,
-            foodId: f.id,
-            n: f.n,
-            u: f.u,
-            qty: q,
-            c: Utils.n(f.c) * q,
-            p: Utils.n(f.p) * q,
-            cb: Utils.n(f.cb) * q,
-            f: Utils.n(f.f) * q,
-            ts: Date.now()
-          });
-        }
-
-        App.save();
-
-        UI.closeAllSheets();
-        document.getElementById("search-input").value = "";
-        document.getElementById("search-results").classList.add("hidden");
-
-        // refresh the right screen
-        if(dateKey === Utils.todayKey()){
-          Render.all();
-        }else{
-          History.refreshDayEditor(dateKey);
-          History.renderCalendar();
-          Trends.render();
-        }
-      },
-
-      deleteIfEditing(){
-        if(!(this.mode === "edit" && this.editLogId)) return alert("Delete is only available when editing a logged item.");
-        const dateKey = this.editDateKey || Utils.todayKey();
-        const day = App.getDay(dateKey);
-        const idx = (day.logs||[]).findIndex(x=>x.id===this.editLogId);
-        if(idx >= 0){
-          day.logs.splice(idx, 1);
-          App.save();
-          UI.closeAllSheets();
-          if(dateKey === Utils.todayKey()) Render.all();
-          else {
-            History.refreshDayEditor(dateKey);
-            History.renderCalendar();
-            Trends.render();
-          }
-        }
-      }
-    };
-
-    /***********************
-     * LIBRARY
-     ***********************/
-    const Library = {
-      toggleFavorite(id){
-        App.state.favorites ||= [];
-        const idx = App.state.favorites.indexOf(id);
-        if(idx >= 0) App.state.favorites.splice(idx,1);
-        else App.state.favorites.push(id);
-        App.save();
-        Foods.search();
-        if(document.getElementById("view-library").classList.contains("active-view")) this.render();
-      },
-
-      render(){
-        const list = document.getElementById("library-list");
-        const q = Utils.norm(document.getElementById("library-search").value);
-        const favs = new Set(App.state.favorites||[]);
-        const all = App.allFoods().filter(f => favs.has(f.id));
-
-        let filtered = all;
-        if(q) filtered = all.filter(f => Utils.norm(f.n).includes(q) || Utils.norm(f.u).includes(q));
-
-        if(!filtered.length){
-          list.innerHTML = `
-            <div class="card p-6 text-center">
-              <div class="text-sm font-black text-white">No saved foods</div>
-              <div class="text-xs text-zinc-500 mt-1">Search on Home and tap ★ to save.</div>
-            </div>
-          `;
-          return;
-        }
-
-        list.innerHTML = filtered
-          .sort((a,b)=>a.n.localeCompare(b.n))
-          .map(f=>`
-            <button class="btn-press card p-4 text-left" onclick="Sheet.openAdd('${f.id}')">
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="text-white font-black truncate">${escapeHtml(f.n)}</div>
-                  <div class="text-xs text-zinc-500 mt-1">${escapeHtml(f.u)} · ${Utils.r0(f.c)} kcal</div>
-                </div>
-                <i class="ph-bold ph-plus text-zinc-300 text-xl"></i>
-              </div>
-            </button>
-          `).join("");
-      },
-
-      addCustomFood(){
-        const name = (document.getElementById("c-name").value || "").trim();
-        const unit = (document.getElementById("c-unit").value || "1 serving").trim();
-        const kcal = Utils.n(document.getElementById("c-kcal").value);
-        const pro = Utils.n(document.getElementById("c-pro").value);
-        const carb = Utils.n(document.getElementById("c-carb").value);
-        const fat = Utils.n(document.getElementById("c-fat").value);
-
-        if(!name || kcal <= 0) return alert("Please enter at least Name + Calories.");
-
-        const id = "custom_" + Utils.id().slice(0,8);
-        App.state.customFoods.unshift({ id, n: name, u: unit, c:kcal, p:pro, cb:carb, f:fat });
-        App.save();
-        UI.closeAllSheets();
-
-        // clear inputs
-        ["c-name","c-unit","c-kcal","c-pro","c-carb","c-fat"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
-
-        // auto-save to favorites too (optional feel)
-        App.state.favorites ||= [];
-        if(!App.state.favorites.includes(id)) App.state.favorites.push(id);
-        App.save();
-
-        alert("Saved ✅ (also added to your saved foods)");
-      }
-    };
-
-    /***********************
-     * SETTINGS
-     ***********************/
-    const Settings = {
-      refresh(){
-        document.getElementById("s-goal").value = Utils.r0(App.state.settings.goal);
-        document.getElementById("s-pro").value = Utils.r0(App.state.settings.pro);
-        document.getElementById("s-carb").value = Utils.r0(App.state.settings.carb);
-        document.getElementById("s-fat").value = Utils.r0(App.state.settings.fat);
-      },
-      preset(v){
-        document.getElementById("s-goal").value = v;
-      },
-      save(){
-        const goal = Utils.clamp(Utils.r0(document.getElementById("s-goal").value), 800, 5000);
-        const pro = Utils.clamp(Utils.r0(document.getElementById("s-pro").value), 0, 400);
-        const carb = Utils.clamp(Utils.r0(document.getElementById("s-carb").value), 0, 600);
-        const fat = Utils.clamp(Utils.r0(document.getElementById("s-fat").value), 0, 200);
-
-        App.state.settings = { goal, pro, carb, fat };
-        App.save();
-        UI.closeAllSheets();
-        Render.all();
-        Trends.render();
-        History.renderCalendar();
-      }
-    };
-
-    /***********************
-     * DATA ACTIONS
-     ***********************/
-    const Data = {
-      addWater(liters){
-        const step = Utils.n(liters || 0.25);
-        const day = App.today();
-        day.waterLiters = Math.max(0, Utils.n(day.waterLiters) + step);
-        App.save();
-        Render.all();
-      },
-      undoWater(liters){
-        const step = Utils.n(liters || 0.25);
-        const day = App.today();
-        day.waterLiters = Math.max(0, Utils.n(day.waterLiters) - step);
-        App.save();
-        Render.all();
-      },
-      setWaterLiters(){
-        const day = App.today();
-        const current = Utils.r1(day.waterLiters || 0).toFixed(1);
-        const input = prompt("Set water for today (liters). Example: 2.0", current);
-        if(input === null) return;
-        const v = Utils.n(input);
-        if(!isFinite(v) || v < 0) return alert("Please enter a valid number (>= 0).");
-        day.waterLiters = Utils.clamp(v, 0, 20);
-        App.save();
-        Render.all();
-      },
-      addBurn(kcal){
-        const day = App.today();
-        day.burn = Math.max(0, Utils.n(day.burn) + Utils.n(kcal));
-        App.save();
-        Render.all();
-      },
-      customBurnPrompt(){
-        const input = prompt("Enter calories burned (kcal):", "200");
-        if(input === null) return;
-        const v = Utils.n(input);
-        if(!isFinite(v) || v <= 0) return alert("Enter a valid positive number.");
-        this.addBurn(v);
-        UI.closeAllSheets();
-      },
-      prefillWeightSheet(){
-        const k = Utils.todayKey();
-        const existing = App.state.weightHistory[k];
-        document.getElementById("quick-weight").value = (existing !== undefined) ? Utils.r1(existing).toFixed(1) : "";
-      },
-      saveWeightForToday(){
-        const v = Utils.n(document.getElementById("quick-weight").value);
-        if(!isFinite(v) || v <= 0) return alert("Enter a valid weight (kg).");
-        const k = Utils.todayKey();
-        App.state.weightHistory[k] = Utils.r1(v);
-        App.save();
-        UI.closeAllSheets();
-        Render.all();
-        Trends.render();
-        History.renderCalendar();
-      }
-    };
-
-    /***********************
-     * HISTORY (Calendar + Day Editor)
-     ***********************/
-    const History = {
-      editingDate: null,
-
-      renderCalendar(){
-        document.getElementById("history-month-label").innerText = Utils.monthLabel();
-
-        const body = document.getElementById("calendar-body");
-        body.innerHTML = "";
-
-        // Build month grid for current month
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth(); // 0-based
-        const first = new Date(year, month, 1);
-        const startDay = first.getDay(); // 0=Sun
-        const daysInMonth = new Date(year, month+1, 0).getDate();
-
-        // leading blanks
-        for(let i=0;i<startDay;i++){
-          const d = document.createElement("div");
-          d.className = "day-cell";
-          d.style.opacity = "0.15";
-          d.innerHTML = "";
-          body.appendChild(d);
-        }
-
-        const goal = Utils.n(App.state.settings.goal);
-
-        for(let dayNum=1; dayNum<=daysInMonth; dayNum++){
-          const iso = new Date(year, month, dayNum).toISOString().slice(0,10);
-          const day = App.state.days[iso] || { logs:[], burn:0, waterLiters:0 };
-          const t = Render.totalsForDay(day);
-          const net = t.net;
-
-          let cls = "day-cell neutral";
-          if((day.logs||[]).length === 0 && Utils.n(day.burn) === 0 && Utils.n(day.waterLiters) === 0) cls = "day-cell";
-          else {
-            // good if within 90%-110% goal net
-            if(goal > 0 && net >= goal*0.9 && net <= goal*1.1) cls = "day-cell good";
-            else if(goal > 0 && net > goal*1.1) cls = "day-cell bad";
-            else cls = "day-cell neutral";
-          }
-
-          const el = document.createElement("button");
-          el.className = cls + " btn-press";
-          el.innerText = String(dayNum);
-          el.onclick = () => this.openDayEditor(iso);
-          body.appendChild(el);
-        }
-      },
-
-      openPickedDate(){
-        const raw = (document.getElementById("pick-date").value || "").trim();
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return alert("Enter date as YYYY-MM-DD");
-        UI.closeAllSheets();
-        this.openDayEditor(raw);
-      },
-
-      openDayEditor(dateKey){
-        this.editingDate = dateKey;
-        const day = App.getDay(dateKey);
-
-        document.getElementById("edit-date-title").innerText = dateKey;
-        const t = Render.totalsForDay(day);
-        document.getElementById("edit-day-summary").innerText = `Eaten ${Utils.r0(t.eaten)} · Burn ${Utils.r0(t.burn)} · Net ${Utils.r0(t.net)} · Logs ${(day.logs||[]).length}`;
-
-        document.getElementById("edit-water").value = Utils.r1(day.waterLiters || 0).toFixed(1);
-        document.getElementById("edit-burn").value = Utils.r0(day.burn || 0);
-
-        const w = App.state.weightHistory[dateKey];
-        document.getElementById("edit-weight").value = (w !== undefined) ? Utils.r1(w).toFixed(1) : "";
-
-        this.refreshDayEditor(dateKey);
-        UI.openSheet("dayEditor");
-      },
-
-      refreshDayEditor(dateKey){
-        const day = App.getDay(dateKey);
-        const list = document.getElementById("edit-logs-list");
-        const logs = (day.logs || []);
-
-        if(!logs.length){
-          list.innerHTML = `
-            <div class="card p-5 text-center">
-              <div class="text-sm font-black text-white">No logs</div>
-              <div class="text-xs text-zinc-500 mt-1">Add logs from Home, or import a backup.</div>
-            </div>
-          `;
-          return;
-        }
-
-        list.innerHTML = logs.map(l=>{
-          return `
-            <div class="card p-4 flex items-center justify-between gap-3">
-              <button class="btn-press flex-1 text-left" onclick="Sheet.openEdit('${l.id}', '${dateKey}')">
-                <div class="text-white font-black truncate">${escapeHtml(l.n)} <span class="text-zinc-500 font-black text-xs">× ${(Utils.n(l.qty||1)).toFixed(2).replace(/\.00$/,'')}</span></div>
-                <div class="text-xs text-zinc-500 mt-1">${escapeHtml(l.meal)} · ${Utils.r0(l.c)} kcal · P${Utils.r0(l.p)} C${Utils.r0(l.cb)} F${Utils.r0(l.f)}</div>
-              </button>
-              <button class="btn-press w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 text-red-300 flex items-center justify-center"
-                onclick="History.deleteLog('${dateKey}','${l.id}')">
-                <i class="ph-bold ph-trash text-xl"></i>
-              </button>
-            </div>
-          `;
-        }).join("");
-      },
-
-      deleteLog(dateKey, logId){
-        const day = App.getDay(dateKey);
-        const idx = (day.logs||[]).findIndex(x=>x.id===logId);
-        if(idx>=0){
-          day.logs.splice(idx,1);
-          App.save();
-          this.refreshDayEditor(dateKey);
-          this.renderCalendar();
-          Trends.render();
-          if(dateKey === Utils.todayKey()) Render.all();
-        }
-      },
-
-      clearLogsForEditingDay(){
-        if(!this.editingDate) return;
-        if(!confirm("Clear all logs for this day?")) return;
-        const day = App.getDay(this.editingDate);
-        day.logs = [];
-        App.save();
-        this.refreshDayEditor(this.editingDate);
-        this.renderCalendar();
-        Trends.render();
-        if(this.editingDate === Utils.todayKey()) Render.all();
-      },
-
-      saveDayEdits(){
-        if(!this.editingDate) return;
-        const dateKey = this.editingDate;
-        const day = App.getDay(dateKey);
-
-        const water = Utils.n(document.getElementById("edit-water").value);
-        const burn = Utils.n(document.getElementById("edit-burn").value);
-        day.waterLiters = Utils.clamp(water, 0, 20);
-        day.burn = Math.max(0, burn);
-
-        const wRaw = (document.getElementById("edit-weight").value || "").trim();
-        if(wRaw){
-          const w = Utils.n(wRaw);
-          if(!isFinite(w) || w <= 0) return alert("Weight must be a positive number.");
-          App.state.weightHistory[dateKey] = Utils.r1(w);
-        }else{
-          // remove weight for that day if blank
-          delete App.state.weightHistory[dateKey];
-        }
-
-        App.save();
-
-        // refresh UI
-        const t = Render.totalsForDay(day);
-        document.getElementById("edit-day-summary").innerText = `Eaten ${Utils.r0(t.eaten)} · Burn ${Utils.r0(t.burn)} · Net ${Utils.r0(t.net)} · Logs ${(day.logs||[]).length}`;
-
-        this.renderCalendar();
-        Trends.render();
-        if(dateKey === Utils.todayKey()) Render.all();
-
-        alert("Saved ✅");
-      }
-    };
-
-    /***********************
-     * TRENDS (Day/Week/Month toggle)
-     ***********************/
-    const Trends = {
-      range: "day",
-      netChart: null,
-      macroChart: null,
-      weightChart: null,
-
-      setRange(r){
-        this.range = r;
-        ["day","week","month"].forEach(x=>{
-          const el = document.getElementById("range-"+x);
-          if(!el) return;
-          const active = (x===r);
-          el.classList.toggle("text-white", active);
-          el.classList.toggle("bg-zinc-800", active);
-          el.classList.toggle("rounded-xl", active);
-          el.classList.toggle("text-zinc-500", !active);
-        });
-        this.render();
-      },
-
-      gather(){
-        // Build a list of daily records sorted
-        const keys = Object.keys(App.state.days || {}).sort();
-        const rows = keys.map(k=>{
-          const day = App.state.days[k] || { logs:[], burn:0, waterLiters:0 };
-          const t = Render.totalsForDay(day);
-          return { date:k, ...t };
-        });
-
-        // ensure includes today at least
-        const today = Utils.todayKey();
-        if(!rows.find(r=>r.date===today)){
-          const d = App.getDay(today);
-          const t = Render.totalsForDay(d);
-          rows.push({ date: today, ...t });
-        }
-
-        rows.sort((a,b)=>a.date.localeCompare(b.date));
-        return rows;
-      },
-
-      groupByWeek(rows){
-        // ISO-ish week key: YYYY-W## based on Thursday rule (good enough)
-        const map = new Map();
-        rows.forEach(r=>{
-          const d = new Date(r.date+"T00:00:00");
-          // set to Thursday
-          const day = (d.getDay()+6)%7;
-          d.setDate(d.getDate() - day + 3);
-          const firstThu = new Date(d.getFullYear(),0,4);
-          const week = 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay()+6)%7)) / 7);
-          const key = `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
-
-          if(!map.has(key)) map.set(key, { key, net:0, eaten:0, burn:0, p:0, cb:0, f:0, count:0 });
-          const agg = map.get(key);
-          agg.net += r.net; agg.eaten += r.eaten; agg.burn += r.burn;
-          agg.p += r.p; agg.cb += r.cb; agg.f += r.f;
-          agg.count += 1;
-        });
-        return Array.from(map.values()).sort((a,b)=>a.key.localeCompare(b.key));
-      },
-
-      groupByMonth(rows){
-        const map = new Map();
-        rows.forEach(r=>{
-          const key = r.date.slice(0,7); // YYYY-MM
-          if(!map.has(key)) map.set(key, { key, net:0, eaten:0, burn:0, p:0, cb:0, f:0, count:0 });
-          const agg = map.get(key);
-          agg.net += r.net; agg.eaten += r.eaten; agg.burn += r.burn;
-          agg.p += r.p; agg.cb += r.cb; agg.f += r.f;
-          agg.count += 1;
-        });
-        return Array.from(map.values()).sort((a,b)=>a.key.localeCompare(b.key));
-      },
-
-      render(){
-        const rows = this.gather();
-        let labels=[], netData=[], pData=[], cData=[], fData=[];
-
-        if(this.range === "day"){
-          const last = rows.slice(-14);
-          labels = last.map(r=>Utils.fmtShortDate(r.date));
-          netData = last.map(r=>Math.round(r.net));
-          pData = last.map(r=>Math.round(r.p));
-          cData = last.map(r=>Math.round(r.cb));
-          fData = last.map(r=>Math.round(r.f));
-          document.getElementById("trend-subtitle").innerText = "Last 14 days";
-          document.getElementById("macro-subtitle").innerText = "Daily grams";
-        } else if(this.range === "week"){
-          const wk = this.groupByWeek(rows).slice(-12);
-          labels = wk.map(x=>x.key);
-          netData = wk.map(x=>Math.round(x.net / Math.max(1,x.count))); // avg net per day
-          pData = wk.map(x=>Math.round(x.p / Math.max(1,x.count)));
-          cData = wk.map(x=>Math.round(x.cb / Math.max(1,x.count)));
-          fData = wk.map(x=>Math.round(x.f / Math.max(1,x.count)));
-          document.getElementById("trend-subtitle").innerText = "Weekly avg (per day)";
-          document.getElementById("macro-subtitle").innerText = "Weekly avg grams (per day)";
-        } else {
-          const mo = this.groupByMonth(rows).slice(-12);
-          labels = mo.map(x=>x.key);
-          netData = mo.map(x=>Math.round(x.net / Math.max(1,x.count)));
-          pData = mo.map(x=>Math.round(x.p / Math.max(1,x.count)));
-          cData = mo.map(x=>Math.round(x.cb / Math.max(1,x.count)));
-          fData = mo.map(x=>Math.round(x.f / Math.max(1,x.count)));
-          document.getElementById("trend-subtitle").innerText = "Monthly avg (per day)";
-          document.getElementById("macro-subtitle").innerText = "Monthly avg grams (per day)";
-        }
-
-        this.renderNet(labels, netData);
-        this.renderMacros(labels, pData, cData, fData);
-        this.renderWeight();
-      },
-
-      renderNet(labels, data){
-        const ctx = document.getElementById("chart-net").getContext("2d");
-        if(this.netChart) this.netChart.destroy();
-
-        this.netChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [{
-              label: "Net kcal",
-              data,
-              tension: 0.35,
-              fill: true,
-              borderColor: "rgba(59,130,246,0.95)",
-              backgroundColor: "rgba(59,130,246,0.12)",
-              pointRadius: 3
-            },{
-              label: "Goal",
-              data: labels.map(()=>Utils.n(App.state.settings.goal)),
-              borderColor: "rgba(255,255,255,0.22)",
-              borderDash: [6,6],
-              pointRadius: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: "rgba(244,244,245,0.75)" } } },
-            scales: {
-              x: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { display:false } },
-              y: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { color: "rgba(255,255,255,0.06)" }, beginAtZero:true }
-            }
-          }
-        });
-      },
-
-      renderMacros(labels, p, c, f){
-        const ctx = document.getElementById("chart-macros").getContext("2d");
-        if(this.macroChart) this.macroChart.destroy();
-
-        this.macroChart = new Chart(ctx, {
-          type: "bar",
-          data: {
-            labels,
-            datasets: [
-              { label: "Protein", data: p, backgroundColor: "rgba(16,185,129,0.75)", borderRadius: 10 },
-              { label: "Carbs", data: c, backgroundColor: "rgba(59,130,246,0.75)", borderRadius: 10 },
-              { label: "Fat", data: f, backgroundColor: "rgba(244,63,94,0.70)", borderRadius: 10 }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: "rgba(244,244,245,0.75)" } } },
-            scales: {
-              x: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { display:false } },
-              y: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { color: "rgba(255,255,255,0.06)" }, beginAtZero:true }
-            }
-          }
-        });
-      },
-
-      renderWeight(){
-        const ctx = document.getElementById("chart-weight").getContext("2d");
-        if(this.weightChart) this.weightChart.destroy();
-
-        const keys = Object.keys(App.state.weightHistory || {}).sort();
-        const labels = keys.slice(-20).map(k=>Utils.fmtShortDate(k));
-        const data = keys.slice(-20).map(k=>Utils.n(App.state.weightHistory[k]));
-
-        this.weightChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [{
-              label: "Weight (kg)",
-              data,
-              tension: 0.35,
-              fill: false,
-              borderColor: "rgba(16,185,129,0.95)",
-              pointRadius: 3
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: "rgba(244,244,245,0.75)" } } },
-            scales: {
-              x: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { display:false } },
-              y: { ticks: { color: "rgba(161,161,170,0.8)" }, grid: { color: "rgba(255,255,255,0.06)" } }
-            }
-          }
-        });
-      }
-    };
-
-    /***********************
-     * BACKUP (Export/Import)
-     ***********************/
-    const Backup = {
-      export(){
-        const blob = { exportedAt: new Date().toISOString(), data: App.state };
-        const text = JSON.stringify(blob, null, 2);
-        navigator.clipboard?.writeText(text).then(()=>{
-          alert("Export copied to clipboard ✅\nPaste into Notes/Drive.");
-        }).catch(()=>{
-          prompt("Copy this JSON:", text);
-        });
-      },
-      import(){
-        const raw = prompt("Paste exported JSON here:");
-        if(!raw) return;
-        try{
-          const parsed = JSON.parse(raw);
-          const data = parsed.data || parsed;
-          App.state = App.migrate(data);
-          App.save();
-          Render.all();
-          Trends.render();
-          History.renderCalendar();
-          Library.render();
-          alert("Import successful ✅");
-        }catch{
-          alert("Import failed. Invalid JSON.");
-        }
-      }
-    };
-
-    /***********************
-     * ACTIONS
-     ***********************/
-    const Actions = {
-      clearTodayPrompt(){
-        if(!confirm("Reset today’s logs + burn + water?")) return;
-        const k = Utils.todayKey();
-        App.state.days[k] = { logs:[], burn:0, waterLiters:0 };
-        App.save();
-        Render.all();
-        Trends.render();
-        History.renderCalendar();
-      },
-      factoryReset(){
-        if(!confirm("Factory reset? This clears EVERYTHING in this browser.")) return;
-        localStorage.removeItem(STORAGE_KEY);
-        location.reload();
-      }
-    };
-
-    /***********************
-     * HELPERS
-     ***********************/
-    function escapeHtml(str){
-      return String(str||"")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    /***********************
-     * BOOT
-     ***********************/
-    App.init();
-
-    // Default trends toggle UI
-    Trends.setRange("day");
-
-    // ESC closes sheets
-    window.addEventListener("keydown", (e)=>{
-      if(e.key === "Escape") UI.closeAllSheets();
-    });
-  </script>
+  <div id="sheet-settings" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="text-xl font-black text-white mb-4">Settings</div>
+    <div class="card p-4 mb-4">
+      <label class="text-[10px] font-black text-zinc-500 uppercase block mb-2">Daily Calorie Goal</label>
+      <input id="s-goal" type="number" placeholder="1650">
+    </div>
+    <button onclick="Settings.save()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">Save Settings</button>
+  </div>
+
+  <div id="sheet-quickWeight" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="text-xl font-black text-white mb-4">Weight Log</div>
+    <input id="quick-weight" type="number" step="0.1" placeholder="Enter kg" class="mb-4">
+    <button onclick="Data.saveWeight()" class="w-full py-4 rounded-3xl bg-white text-black font-black uppercase tracking-widest text-xs btn-press">Save Weight</button>
+  </div>
+
+  <div id="sheet-exercise" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="text-xl font-black text-white mb-4">Add Activity</div>
+    <div class="grid grid-cols-2 gap-3">
+      <button onclick="Data.addBurn(450)" class="card p-4 text-left btn-press">
+        <div class="text-emerald-400 font-black">Cricket</div>
+        <div class="text-xs text-zinc-500">+450 kcal</div>
+      </button>
+      <button onclick="Data.addBurn(350)" class="card p-4 text-left btn-press">
+        <div class="text-emerald-400 font-black">Tennis</div>
+        <div class="text-xs text-zinc-500">+350 kcal</div>
+      </button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
